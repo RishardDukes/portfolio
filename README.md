@@ -30,7 +30,7 @@ I am a hardworker, making quirky ideas into working code. I have built numerical
 **What is it?**  
 A mini-library implementing Trapezoidal/Simpson’s rules and ODE solvers utilizing relative error tables, log–log plots, and empirical convergence orders.  
 **Tech Involved:** Python, NumPy, Matplotlib  
-**Repo:** *[To be added]*  
+**Repo:** [View Project](projects/numerical_methods) 
 
 ---
 
@@ -38,7 +38,7 @@ A mini-library implementing Trapezoidal/Simpson’s rules and ODE solvers utiliz
 **What is it?**  
 PCA from scratch for face dimensionality reduction and classification utilizing a data loader for PGM images, eigenfaces, projection + custom distance classifier.  
 **Tech Involved:** Python, NumPy, SciPy, Matplotlib  
-**Repo:** *[To be added]*  
+**Repo:** [View Project](projects/pca_faces)
 
 ---
 
@@ -46,7 +46,7 @@ PCA from scratch for face dimensionality reduction and classification utilizing 
 **What is it?**  
 Embed and extract a visible watermark using K-Means on image channels/blocks utilizing a pipeline to insert a smiley PNG watermark and recover it; analysis of quality vs. compression.  
 **Tech Involved:** Python, OpenCV, NumPy  
-**Repo:** *[To be added]*  
+**Repo:** [View Project](projects/kmeans_watermark)
 
 ---
 
@@ -54,5 +54,4 @@ Embed and extract a visible watermark using K-Means on image channels/blocks uti
 **What is it?**  
 Quick connectivity checker with clean terminal output and summary utilizing ICMP pings, latency stats, reachable/unreachable reporting.  
 **Tech Involved:** Python (subprocess), Windows/PowerShell notes  
-**Repo:** *[To be added]*  
-
+**Repo:** [View Project](projects/ping_monitor)
