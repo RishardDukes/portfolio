@@ -1,4 +1,4 @@
-# portfolio
+# Portfolio
 
 **Rishard Dukes's Online Portfolio**  
 Computational Science Grad • AI/ML & Software • Evolving IT Technician/Software Engineer from Florida State University (B.S.)
