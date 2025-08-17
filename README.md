@@ -26,11 +26,13 @@ I am a hardworker, making quirky ideas into working code. I have built numerical
 
 ## 📂 Highlighted Projects
 
+---
+
 ### Numerical Integration & ODE Solvers — *Error & Convergence Suite*
 **What is it?**  
 A mini-library implementing Trapezoidal/Simpson’s rules and ODE solvers utilizing relative error tables, log–log plots, and empirical convergence orders.  
 **Tech Involved:** Python, NumPy, Matplotlib  
-**Repo:** [View Project](projects/numerical_methods) 
+**Repo:** [View Project](numerical_methods)
 
 ---
 
@@ -38,7 +40,7 @@ A mini-library implementing Trapezoidal/Simpson’s rules and ODE solvers utiliz
 **What is it?**  
 PCA from scratch for face dimensionality reduction and classification utilizing a data loader for PGM images, eigenfaces, projection + custom distance classifier.  
 **Tech Involved:** Python, NumPy, SciPy, Matplotlib  
-**Repo:** [View Project](projects/pca_faces)
+**Repo:** [View Project](pca_faces)
 
 ---
 
@@ -46,7 +48,7 @@ PCA from scratch for face dimensionality reduction and classification utilizing 
 **What is it?**  
 Embed and extract a visible watermark using K-Means on image channels/blocks utilizing a pipeline to insert a smiley PNG watermark and recover it; analysis of quality vs. compression.  
 **Tech Involved:** Python, OpenCV, NumPy  
-**Repo:** [View Project](projects/kmeans_watermark)
+**Repo:** [View Project](kmeans_watermark)
 
 ---
 
@@ -54,4 +56,13 @@ Embed and extract a visible watermark using K-Means on image channels/blocks uti
 **What is it?**  
 Quick connectivity checker with clean terminal output and summary utilizing ICMP pings, latency stats, reachable/unreachable reporting.  
 **Tech Involved:** Python (subprocess), Windows/PowerShell notes  
-**Repo:** [View Project](projects/ping_monitor)
+**Repo:** [View Project](ping_monitor)
+
+---
+
+### SOM for Mammographic Image Patterns
+**What is it?**  
+Pattern discovery on medical imaging using Self-Organizing Maps (demo currently uses sklearn digits for proof of concept).  
+**Tech Involved:** Python, scikit-learn, sklearn_som, Matplotlib  
+**Repo:** [View Project](som_mammograms)
+
