@@ -24,9 +24,27 @@ I am a hardworker, making quirky ideas into working code. I have built numerical
 
 ---
 
-## 📂 Highlighted Projects
+## 🚀 Quickstart
 
+To run any of the projects in this portfolio:
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/RishardDukes/portfolio.git
+cd portfolio
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run a demo (choose one)
+python numerical_methods/numerical_demo.py
+python pca_faces/pca_faces_demo.py
+python kmeans_watermark/watermark_demo.py
+python som_mammograms/som_demo.py
+python ping_monitor/ping_demo.py
+```
 ---
+## 📂 Highlighted Projects
 
 ### Numerical Integration & ODE Solvers — *Error & Convergence Suite*
 **What is it?**  
