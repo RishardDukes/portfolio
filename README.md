@@ -6,7 +6,7 @@ Computational Science Grad • AI/ML & Software • Evolving IT Technician/Softw
 ---
 
 *Projects you can actually use.*
-That has grown into my motto. I’m a hard-working builder who delivers clean, well-documented code that solves real problems. I’ve built numerical-methods toolkits, computer-vision pipelines, and ML demos—and I still get hands-on with practical IT work like connectivity checks and troubleshooting. I value clarity, reliability, and results.
+That has grown into my motto. I’m a hard-working engineer who delivers clean, well-documented code that solves real problems. I’ve built numerical-methods toolkits, computer-vision pipelines, and ML demos—and I still get hands-on with practical IT work like connectivity checks and troubleshooting. I value clarity, reliability, and results.
 
 📫 **Contacts:**  
 - [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)  
