@@ -1,0 +1,138 @@
+<!-- additional_projects/workout_tracker/src/workout_tracker/static/index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Workout Tracker Widget</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
+    form, .row { display: grid; gap: 12px; max-width: 520px; }
+    label { display: grid; gap: 6px; }
+    input, select, button { padding: 8px 10px; font-size: 14px; }
+    table { border-collapse: collapse; margin-top: 16px; width: 100%; max-width: 720px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    .wrap { display: grid; gap: 24px; grid-template-columns: 1fr; }
+    @media (min-width: 900px) { .wrap { grid-template-columns: 1fr 1fr; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Workout Tracker</h1>
+
+  <div class="wrap">
+    <section>
+      <h2>Add Set</h2>
+      <form id="addForm">
+        <label>Date <input type="date" id="date" required /></label>
+        <label>Exercise
+          <input list="exlist" id="exercise" placeholder="Bench" required />
+          <datalist id="exlist"></datalist>
+        </label>
+        <label>Weight <input type="number" step="0.1" id="weight" placeholder="135" required /></label>
+        <label>Reps <input type="number" id="reps" placeholder="8" required /></label>
+        <button type="submit">Add</button>
+      </form>
+
+      <h2 style="margin-top:24px">Recent Sets</h2>
+      <label>Filter by Exercise
+        <select id="filterExercise"></select>
+      </label>
+      <table id="logTable">
+        <thead><tr><th>Date</th><th>Weight</th><th>Reps</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Progress</h2>
+      <canvas id="chart" height="240"></canvas>
+    </section>
+  </div>
+
+  <script>
+    const exList = document.getElementById('exlist');
+    const exFilter = document.getElementById('filterExercise');
+    const form = document.getElementById('addForm');
+    const tbody = document.querySelector('#logTable tbody');
+    const chartCtx = document.getElementById('chart').getContext('2d');
+    let chart;
+
+    async function fetchJSON(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+
+    async function loadExercises() {
+      const items = await fetchJSON('/api/exercises');
+      exList.innerHTML = items.map(x => `<option value="${x}">`).join('');
+      exFilter.innerHTML = ['(choose...)', ...items].map((x, i) =>
+        `<option value="${i ? x : ''}">${x}</option>`).join('');
+    }
+
+    async function loadLogs(exercise) {
+      const url = exercise ? `/api/logs?exercise=${encodeURIComponent(exercise)}&limit=100` : '/api/logs';
+      const rows = await fetchJSON(url);
+      // table
+      if (exercise) {
+        tbody.innerHTML = rows.map(r =>
+          `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.reps}</td></tr>`
+        ).join('');
+      } else {
+        tbody.innerHTML = rows.map(r =>
+          `<tr><td>${r.date} — ${r.exercise}</td><td>${r.weight}</td><td>${r.reps}</td></tr>`
+        ).join('');
+      }
+      // chart (weight over time)
+      if (exercise) {
+        const labels = rows.map(r => r.date);
+        const data = rows.map(r => r.weight);
+        if (chart) chart.destroy();
+        chart = new Chart(chartCtx, {
+          type: 'line',
+          data: { labels, datasets: [{ label: `${exercise} weight`, data, tension: 0.2, pointRadius: 3 }] },
+          options: { responsive: true, plugins: { legend: { display: true } } }
+        });
+      } else {
+        if (chart) chart.destroy();
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        date: document.getElementById('date').value,
+        exercise: document.getElementById('exercise').value.trim(),
+        weight: document.getElementById('weight').value,
+        reps: document.getElementById('reps').value
+      };
+      if (!payload.date || !payload.exercise) return;
+      await fetch('/api/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      // refresh UI
+      await loadExercises();
+      const selected = exFilter.value || payload.exercise;
+      exFilter.value = selected;
+      await loadLogs(selected || null);
+      form.reset();
+    });
+
+    exFilter.addEventListener('change', () => {
+      const v = exFilter.value;
+      loadLogs(v || null);
+    });
+
+    // init
+    (async () => {
+      // default date = today
+      document.getElementById('date').value = new Date().toISOString().slice(0,10);
+      await loadExercises();
+      await loadLogs(null);
+    })();
+  </script>
+</body>
+</html>
