@@ -1,2 +1,6 @@
 matplotlib>=3.8
 Flask>=3.0
+
+# Use this wiithout # to run in terminal:
+# cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
+# python additional_projects/workout_tracker/makewidgit.py
