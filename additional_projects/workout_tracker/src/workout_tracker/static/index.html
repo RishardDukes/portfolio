@@ -6,47 +6,140 @@
   <title>Workout Tracker Widget</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 24px; }
-    form, .row { display: grid; gap: 12px; max-width: 520px; }
-    label { display: grid; gap: 6px; }
-    input, select, button { padding: 8px 10px; font-size: 14px; }
-    table { border-collapse: collapse; margin-top: 16px; width: 100%; max-width: 720px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    .wrap { display: grid; gap: 24px; grid-template-columns: 1fr; }
-    @media (min-width: 900px) { .wrap { grid-template-columns: 1fr 1fr; } }
+    :root {
+      --bg: #0f172a;          /* slate-900 */
+      --card: #111827;        /* gray-900 */
+      --muted: #9ca3af;       /* gray-400 */
+      --text: #e5e7eb;        /* gray-200 */
+      --accent: #22c55e;      /* green-500 */
+      --danger: #ef4444;      /* red-500 */
+      --border: #1f2937;      /* gray-800 */
+    }
+    * { box-sizing: border-box }
+    body {
+      margin: 0; padding: 24px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, var(--bg), #0b1225 60%);
+      color: var(--text);
+    }
+    h1 { margin: 0 0 16px; font-size: 28px; }
+    .motto { color: var(--muted); margin: 0 0 24px; }
+    .wrap {
+      display: grid; gap: 24px; grid-template-columns: 1fr;
+      max-width: 1200px; margin: 0 auto;
+    }
+    @media (min-width: 980px) { .wrap { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: radial-gradient(1200px 300px at -10% -10%, #1a2033, transparent 60%),
+                  radial-gradient(1000px 400px at 110% -20%, #0f1933, transparent 60%),
+                  var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .grid { display: grid; gap: 12px; }
+    label { font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+    input, select, button {
+      padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: #0b1221; color: var(--text); font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #2f3a58; }
+    button { cursor: pointer; border: 1px solid #1e293b; }
+    .btn-primary { background: #0e1b34; border-color: #2b3f6b; }
+    .btn-primary:hover { background: #132243; }
+    .btn-danger { background: #2a0f12; border-color: #4c1d1d; color: #fecaca; }
+    .btn-danger:hover { background: #3b171a; }
+    .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .row-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    table {
+      width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;
+      border: 1px solid var(--border);
+    }
+    th, td { border-bottom: 1px solid var(--border); padding: 10px; text-align: left; }
+    thead th { color: var(--muted); font-weight: 600; background: #0d1427; }
+    tbody tr:hover { background: #0f1830; }
+    .hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+    .spacer { height: 8px; }
+    .flex { display: flex; gap: 8px; align-items: center; }
+    .right { text-align: right; }
+    .pill {
+      display: inline-block; padding: 4px 8px; border-radius: 999px;
+      border: 1px solid var(--border); color: var(--muted); font-size: 12px;
+    }
+    .toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-top: 12px; }
+    .error {
+      background: #2a0f12; border: 1px solid #4c1d1d; color: #fecaca;
+      padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; display: none;
+    }
+    .success {
+      background: #0f2a17; border: 1px solid #1d4c2e; color: #bbf7d0;
+      padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; display: none;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <h1>Workout Tracker</h1>
+  <p class="motto">Projects you can actually use.</p>
 
   <div class="wrap">
-    <section>
-      <h2>Add Set</h2>
-      <form id="addForm">
-        <label>Date <input type="date" id="date" required /></label>
-        <label>Exercise
-          <input list="exlist" id="exercise" placeholder="Bench" required />
-          <datalist id="exlist"></datalist>
-        </label>
-        <label>Weight <input type="number" step="0.1" id="weight" placeholder="135" required /></label>
-        <label>Reps <input type="number" id="reps" placeholder="8" required /></label>
-        <button type="submit">Add</button>
+    <!-- LEFT: Add + Table -->
+    <section class="card">
+      <h2 style="margin-top:0">Add Set</h2>
+      <div id="msgErr" class="error"></div>
+      <div id="msgOk" class="success"></div>
+
+      <form id="addForm" class="grid">
+        <div class="row-4">
+          <label>Date
+            <input type="date" id="date" required />
+          </label>
+          <label>Exercise
+            <input list="exlist" id="exercise" placeholder="Bench" required />
+            <datalist id="exlist"></datalist>
+          </label>
+          <label>Weight
+            <input type="number" step="0.1" id="weight" placeholder="135" required />
+          </label>
+          <label>Reps
+            <input type="number" id="reps" placeholder="8" required />
+          </label>
+        </div>
+        <div class="flex">
+          <button type="submit" class="btn-primary">Add Set</button>
+          <span class="pill">Data file: ~/.workout_tracker.sqlite3</span>
+        </div>
       </form>
 
-      <h2 style="margin-top:24px">Recent Sets</h2>
-      <label>Filter by Exercise
-        <select id="filterExercise"></select>
-      </label>
+      <div class="toolbar">
+        <div class="flex">
+          <label>Filter
+            <select id="filterExercise"></select>
+          </label>
+        </div>
+        <div class="right hint">Click <b>Delete</b> to remove a set.</div>
+      </div>
+
       <table id="logTable">
-        <thead><tr><th>Date</th><th>Weight</th><th>Reps</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Exercise</th>
+            <th>Weight</th>
+            <th>Reps</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
         <tbody></tbody>
       </table>
     </section>
 
-    <section>
-      <h2>Progress</h2>
+    <!-- RIGHT: Chart -->
+    <section class="card">
+      <h2 style="margin-top:0">Progress</h2>
       <canvas id="chart" height="240"></canvas>
+      <p class="hint">Select an exercise to see weight-over-time. The chart updates as you add or delete sets.</p>
     </section>
   </div>
 
@@ -56,49 +149,74 @@
     const form = document.getElementById('addForm');
     const tbody = document.querySelector('#logTable tbody');
     const chartCtx = document.getElementById('chart').getContext('2d');
+    const msgErr = document.getElementById('msgErr');
+    const msgOk = document.getElementById('msgOk');
     let chart;
 
-    async function fetchJSON(url) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(await res.text());
+    function showMsg(el, text) {
+      el.textContent = text;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 2200);
+    }
+
+    async function fetchJSON(url, options) {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || (res.status + ' ' + res.statusText));
+      }
       return res.json();
     }
 
     async function loadExercises() {
       const items = await fetchJSON('/api/exercises');
       exList.innerHTML = items.map(x => `<option value="${x}">`).join('');
-      exFilter.innerHTML = ['(choose...)', ...items].map((x, i) =>
+      const opts = ['(All Exercises)', ...items];
+      exFilter.innerHTML = opts.map((x, i) =>
         `<option value="${i ? x : ''}">${x}</option>`).join('');
     }
 
     async function loadLogs(exercise) {
       const url = exercise ? `/api/logs?exercise=${encodeURIComponent(exercise)}&limit=100` : '/api/logs';
       const rows = await fetchJSON(url);
-      // table
-      if (exercise) {
-        tbody.innerHTML = rows.map(r =>
-          `<tr><td>${r.date}</td><td>${r.weight}</td><td>${r.reps}</td></tr>`
-        ).join('');
-      } else {
-        tbody.innerHTML = rows.map(r =>
-          `<tr><td>${r.date} — ${r.exercise}</td><td>${r.weight}</td><td>${r.reps}</td></tr>`
-        ).join('');
-      }
-      // chart (weight over time)
+
+      // render table rows (use a unified shape)
+      tbody.innerHTML = rows.map(r => {
+        const ex = ('exercise' in r && r.exercise) ? r.exercise : (exercise || '');
+        const id = r.id ?? '';
+        return `<tr data-id="${id}">
+          <td>${r.date}</td>
+          <td>${ex}</td>
+          <td>${r.weight}</td>
+          <td>${r.reps}</td>
+          <td><button class="del btn-danger" data-id="${id}">Delete</button></td>
+        </tr>`;
+      }).join('');
+
+      // render chart only when a specific exercise is selected
       if (exercise) {
         const labels = rows.map(r => r.date);
         const data = rows.map(r => r.weight);
         if (chart) chart.destroy();
-        chart = new Chart(chartCtx, {
-          type: 'line',
-          data: { labels, datasets: [{ label: `${exercise} weight`, data, tension: 0.2, pointRadius: 3 }] },
-          options: { responsive: true, plugins: { legend: { display: true } } }
-        });
+        if (labels.length) {
+          chart = new Chart(chartCtx, {
+            type: 'line',
+            data: { labels, datasets: [{ label: `${exercise} weight`, data, tension: 0.2, pointRadius: 3 }] },
+            options: {
+              responsive: true,
+              plugins: { legend: { display: true } },
+              scales: { x: { ticks: { color: '#9ca3af' } }, y: { ticks: { color: '#9ca3af' } } }
+            }
+          });
+        } else {
+          if (chart) chart.destroy();
+        }
       } else {
         if (chart) chart.destroy();
       }
     }
 
+    // Add Set
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const payload = {
@@ -108,19 +226,47 @@
         reps: document.getElementById('reps').value
       };
       if (!payload.date || !payload.exercise) return;
-      await fetch('/api/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      // refresh UI
-      await loadExercises();
-      const selected = exFilter.value || payload.exercise;
-      exFilter.value = selected;
-      await loadLogs(selected || null);
-      form.reset();
+      try {
+        await fetchJSON('/api/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        showMsg(msgOk, 'Set added.');
+        await loadExercises();
+        // keep current selection or switch to the exercise just added
+        const selected = exFilter.value || payload.exercise;
+        exFilter.value = selected;
+        await loadLogs(selected || null);
+        form.reset();
+        document.getElementById('date').value = new Date().toISOString().slice(0,10);
+      } catch (err) {
+        showMsg(msgErr, 'Add failed: ' + err.message);
+      }
     });
 
+    // Delete Set (event delegation on table body)
+    tbody.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button.del');
+      if (!btn) return;
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      if (!confirm('Delete this set?')) return;
+      try {
+        await fetchJSON('/api/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        showMsg(msgOk, 'Set deleted.');
+        const current = exFilter.value || '';
+        await loadLogs(current || null);
+      } catch (err) {
+        showMsg(msgErr, 'Delete failed: ' + err.message);
+      }
+    });
+
+    // Filter change
     exFilter.addEventListener('change', () => {
       const v = exFilter.value;
       loadLogs(v || null);
@@ -128,11 +274,15 @@
 
     // init
     (async () => {
-      // default date = today
       document.getElementById('date').value = new Date().toISOString().slice(0,10);
-      await loadExercises();
-      await loadLogs(null);
+      try {
+        await loadExercises();
+        await loadLogs(null);
+      } catch (err) {
+        showMsg(msgErr, 'Init failed: ' + err.message);
+      }
     })();
   </script>
 </body>
 </html>
+
