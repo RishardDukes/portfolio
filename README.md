@@ -5,7 +5,7 @@ Computational Science Grad • AI/ML & Software • Evolving IT Technician/Softw
 
 ---
 
-I am a hardworker, making quirky ideas into working code. I have built numerical methods toolkits, computer vision pipelines, and ML demos—while also getting my hands dirty with practical IT tasks like connectivity checks and troubleshooting. I value clean, well-documented code and clear results.  
+I am a hardworker, generating code for projects you can actually use... I have built numerical methods toolkits, computer vision pipelines, and ML demos—while also getting my hands dirty with practical IT tasks like connectivity checks and troubleshooting. I value clean, well-documented code and clear results. 
 
 📫 **Contacts:**  
 - [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)  
