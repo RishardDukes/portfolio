@@ -5,7 +5,8 @@ Computational Science Grad • AI/ML & Software • Evolving IT Technician/Softw
 
 ---
 
-I am a hardworker, generating code for projects you can actually use... I have built numerical methods toolkits, computer vision pipelines, and ML demos—while also getting my hands dirty with practical IT tasks like connectivity checks and troubleshooting. I value clean, well-documented code and clear results. 
+*Projects you can actually use.*
+That has grown into my motto. I’m a hard-working builder who delivers clean, well-documented code that solves real problems. I’ve built numerical-methods toolkits, computer-vision pipelines, and ML demos—and I still get hands-on with practical IT work like connectivity checks and troubleshooting. I value clarity, reliability, and results.
 
 📫 **Contacts:**  
 - [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)  
@@ -83,4 +84,20 @@ Quick connectivity checker with clean terminal output and summary utilizing ICMP
 Pattern discovery on medical imaging using Self-Organizing Maps (demo currently uses sklearn digits for proof of concept).  
 **Tech Involved:** Python, scikit-learn, sklearn_som, Matplotlib  
 **Repo:** [View Project](som_mammograms)
+
+---
+
+### Workout Tracker — Widget + CLI *(Additional Project)*
+**What is it?**  
+Local SQLite workout logger with a small Flask widget UI and a simple CLI for adding sets and plotting progress.  
+**Tech Involved:** Python, Flask, Matplotlib, SQLite  
+**Repo:** [View Project](additional_projects/workout_tracker)
+
+---
+
+### Ping Checker 2.0 — Async uptime + HTML report *(Additional Project)*
+**What is it?**  
+Asynchronous TCP host checks with SQLite history and a static HTML report (no external dependencies).  
+**Tech Involved:** Python stdlib (`asyncio`, `sqlite3`, `argparse`, `pathlib`)  
+**Repo:** [View Project](additional_projects/ping_checker_2)
 
