@@ -11,3 +11,12 @@ def fetch_logs(exercise, limit=None):
         cur=c.execute("SELECT date,weight,reps FROM logs WHERE exercise=? ORDER BY date",(exercise,))
         rows=cur.fetchall()
     return rows[-limit:] if limit else rows
+def delete_log(row_id: int):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM logs WHERE id=?", (row_id,))
+
+def fetch_logs_with_id(exercise: str, limit: int | None = None):
+    with get_conn() as conn:
+        q = "SELECT id, date, weight, reps FROM logs WHERE exercise=? ORDER BY date"
+        rows = conn.execute(q, (exercise,)).fetchall()
+    return rows[-limit:] if limit else rows
