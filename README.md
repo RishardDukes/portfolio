@@ -16,7 +16,7 @@ That has grown into my motto. I’m a hard-working engineer who delivers clean, 
 ---
 
 ## 🧰 Core Skills
-- **Programming:** Python, C++, MATLAB, HTML, Javascript 
+- **Programming:** Python, C++, MATLAB, HTML, Javascript, Rstudio
 - **ML/AI:** PCA (from scratch), CNNs (basics), clustering (K-Means), SOMs, regression  
 - **Numerical Methods:** Trapezoidal, Simpson’s, Forward/Backward Euler, Adams–Bashforth, BDF, Runge–Kutta  
 - **Image/Signal:** OpenCV, image I/O, pixel manipulation, watermarking  
