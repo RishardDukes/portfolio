@@ -1,5 +1,11 @@
-matplotlib>=3.8
-Flask>=3.0
+flask==3.0.3
+flask_sqlalchemy==3.1.1
+flask_login==0.6.3
+python-dotenv==1.0.1
+# optional later:
+# flask-wtf==1.2.1
+# email-validator==2.2.0
+
 
 # Use this wiithout # to run in terminal:
 # cd "$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
