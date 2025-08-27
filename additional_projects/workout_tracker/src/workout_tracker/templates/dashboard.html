@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<section>
+  <h3>Add a workout</h3>
+  <form id="log-form">
+    <p><label>Date <input type="date" name="date" value="{{ now().date() }}"></label></p>
+    <p><label>Exercise <input name="exercise" placeholder="e.g., Bench Press" required></label></p>
+    <p>
+      <label>Sets <input type="number" name="sets" min="0" value="3"></label>
+      <label>Reps <input type="number" name="reps" min="0" value="8"></label>
+      <label>Weight <input type="number" name="weight" min="0" step="0.5" value="135"></label>
+    </p>
+    <p><label>Notes <input name="notes" placeholder="optional notes"></label></p>
+    <button type="submit">Add</button>
+  </form>
+</section>
+
+<hr/>
+
+<section>
+  <h3>Your recent workouts</h3>
+  <div id="status"></div>
+  <table id="workouts-table" border="1" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th>
+        <th>Weight</th><th>Notes</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}
