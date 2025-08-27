@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Create your account</h2>
+<form method="POST">
+  <p><input name="email" placeholder="Email" /></p>
+  <p><input name="display_name" placeholder="Display Name (optional)" /></p>
+  <p><input type="password" name="password" placeholder="Password (min 8 chars)" /></p>
+  <p><button type="submit">Create account</button></p>
+</form>
+<p>Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>.</p>
+{% endblock %}
