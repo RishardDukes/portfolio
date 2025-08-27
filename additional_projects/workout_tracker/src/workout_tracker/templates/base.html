@@ -5,41 +5,94 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Workout Tracker</title>
   <style>
+    :root {
+      --bg: #2e2e2e;     /* dark grey */
+      --text: #f5f5f5;   /* light text */
+      --link: #9ecbff;   /* soft blue links */
+      --card: rgba(0, 0, 0, 0.6);
+      --shadow: rgba(0, 0, 0, 0.4);
+      --emoji-opacity: 0.20; /* faint */
+      --emoji-size: clamp(2.4rem, 2.5vw + 1rem, 4rem);
+      --content-max: 720px;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
     body { 
-      font-family: system-ui, sans-serif; 
-      max-width: 720px; 
-      margin: 2rem auto; 
-      padding: 0 1rem; 
-      background-color: #2e2e2e;   /* dark grey */
-      color: #f5f5f5;              /* light text */
-      /* Add a fitness-themed background */
-      background-image: url("https://twemoji.maxcdn.com/v/latest/svg/1f4aa.svg"),
-                        url("https://twemoji.maxcdn.com/v/latest/svg/1f3cb.svg");
-      background-repeat: repeat;
-      background-size: 48px 48px;
-      background-attachment: fixed;
-      background-position: top left, bottom right;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      max-width: var(--content-max);
+      margin: 2rem auto;
+      padding: 0 1rem;
+      background-color: var(--bg);
+      color: var(--text);
+      position: relative;
+      overflow-x: hidden;
     }
 
     nav a { 
       margin-right: 0.75rem; 
-      color: #9ecbff; 
+      color: var(--link); 
       text-decoration: none; 
     }
     nav a:hover { text-decoration: underline; }
 
     .flash { padding: 0.4rem 0; color: #ffaaaa; }
     
-    /* Put content on a translucent card so text is readable over icons */
     .content-card {
-      background: rgba(0, 0, 0, 0.6);
+      background: var(--card);
       padding: 1rem 1.5rem;
       border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 8px var(--shadow);
+      position: relative;
+      z-index: 2; /* above the emoji layer */
+    }
+
+    /* Background “stickers” layer */
+    .emoji-bg {
+      position: fixed;
+      inset: 0;              /* top:0 right:0 bottom:0 left:0 */
+      pointer-events: none;
+      z-index: 1;
+    }
+    .emoji-bg span {
+      position: absolute;
+      font-size: var(--emoji-size);
+      opacity: var(--emoji-opacity);
+      filter: saturate(0.9) contrast(0.9);
+      user-select: none;
     }
   </style>
 </head>
 <body>
+  <!-- subtle background stickers: 10x 💪 and 10x 🏋️ -->
+  <div class="emoji-bg">
+    <!-- 💪 (10) -->
+    <span style="top:5%; left:8%;">💪</span>
+    <span style="top:12%; left:72%;">💪</span>
+    <span style="top:22%; left:28%;">💪</span>
+    <span style="top:30%; left:86%;">💪</span>
+    <span style="top:41%; left:12%;">💪</span>
+    <span style="top:52%; left:63%;">💪</span>
+    <span style="top:60%; left:35%;">💪</span>
+    <span style="top:71%; left:78%;">💪</span>
+    <span style="top:82%; left:18%;">💪</span>
+    <span style="top:90%; left:55%;">💪</span>
+
+    <!-- 🏋️ (10) -->
+    <span style="top:7%; left:48%;">🏋️</span>
+    <span style="top:16%; left:18%;">🏋️</span>
+    <span style="top:27%; left:58%;">🏋️</span>
+    <span style="top:36%; left:42%;">🏋️</span>
+    <span style="top:47%; left:82%;">🏋️</span>
+    <span style="top:55%; left:8%;">🏋️</span>
+    <span style="top:66%; left:50%;">🏋️</span>
+    <span style="top:74%; left:30%;">🏋️</span>
+    <span style="top:86%; left:70%;">🏋️</span>
+    <span style="top:93%; left:88%;">🏋️</span>
+  </div>
+
   <nav>
     <a href="{{ url_for('main.home') }}">Home</a>
     <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
