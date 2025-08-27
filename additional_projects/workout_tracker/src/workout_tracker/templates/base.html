@@ -5,19 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Workout Tracker</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
-    nav a { margin-right: 0.75rem; }
-    .flash { padding: 0.4rem 0; color: darkred; }
+    body { 
+      font-family: system-ui, sans-serif; 
+      max-width: 720px; 
+      margin: 2rem auto; 
+      padding: 0 1rem; 
+      background-color: #2e2e2e;   /* dark grey */
+      color: #f5f5f5;              /* light text */
+      /* Add a fitness-themed background */
+      background-image: url("https://twemoji.maxcdn.com/v/latest/svg/1f4aa.svg"),
+                        url("https://twemoji.maxcdn.com/v/latest/svg/1f3cb.svg");
+      background-repeat: repeat;
+      background-size: 48px 48px;
+      background-attachment: fixed;
+      background-position: top left, bottom right;
+    }
+
+    nav a { 
+      margin-right: 0.75rem; 
+      color: #9ecbff; 
+      text-decoration: none; 
+    }
+    nav a:hover { text-decoration: underline; }
+
+    .flash { padding: 0.4rem 0; color: #ffaaaa; }
+    
+    /* Put content on a translucent card so text is readable over icons */
+    .content-card {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
   </style>
 </head>
 <body>
   <nav>
-    <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/tracker">Tracker</a>
-    <a href="/login">Login</a>
-    <a href="/register">Register</a>
-    <a href="/logout">Logout</a>
+    <a href="{{ url_for('main.home') }}">Home</a>
+    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('main.tracker') }}">Tracker</a>
+    <a href="{{ url_for('auth.login') }}">Login</a>
+    <a href="{{ url_for('auth.register') }}">Register</a>
+    <a href="{{ url_for('auth.logout') }}">Logout</a>
   </nav>
   <hr />
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -27,6 +56,8 @@
       {% endfor %}
     {% endif %}
   {% endwith %}
-  {% block content %}{% endblock %}
+  <div class="content-card">
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>

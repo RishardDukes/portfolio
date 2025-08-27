@@ -12,7 +12,7 @@ auth = Blueprint("auth", __name__)
 def register():
     # Already logged in? Send them to their dashboard.
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for('main.dashboard'))
 
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
@@ -40,7 +40,7 @@ def register():
         login_user(user, remember=True)
         flash("Welcome! Account created.", "success")
         # If you have a different landing page, change 'dashboard' below.
-        return redirect(url_for("dashboard"))
+        return redirect(url_for('main.dashboard'))
 
     # GET
     return render_template("register.html")
@@ -49,7 +49,7 @@ def register():
 @auth.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for('main.dashboard'))
 
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
@@ -62,7 +62,7 @@ def login():
             # support ?next=/some/protected/page
             next_url = request.args.get("next")
             flash("Logged in successfully.", "success")
-            return redirect(next_url or url_for("dashboard"))
+            return redirect(next_url or url_for('main.dashboard'))
 
         flash("Invalid email or password.", "danger")
 

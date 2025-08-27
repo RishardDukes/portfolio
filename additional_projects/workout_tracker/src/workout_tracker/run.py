@@ -1,7 +1,7 @@
-# run.py
-from workout_tracker.src.workout_tracker import create_app
+# run.py (repo root: /workspaces/portfolio)
 
-# create the Flask app
+from additional_projects.workout_tracker.src.workout_tracker import create_app
+
 app = create_app()
 
 if __name__ == "__main__":
