@@ -148,6 +148,13 @@ function wireForm() {
 
       await fetchWorkouts();
       setStatus("Workout added.", "ok");
+
+      // 🔊 Play success sound
+      const snd = document.getElementById("success-sound");
+      if (snd) {
+        snd.currentTime = 0;
+        snd.play().catch(() => {}); // ignore autoplay errors
+      }
     } catch (err) {
       setStatus(`Failed to add workout: ${err.message}`, "err");
     }
@@ -159,4 +166,3 @@ document.addEventListener("DOMContentLoaded", () => {
   wireForm();
   fetchWorkouts();
 });
-
