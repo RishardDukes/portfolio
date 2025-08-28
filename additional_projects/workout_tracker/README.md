@@ -1,6 +1,6 @@
-# Workout Tracker — Flask Web App **Projects you can ACTUALLY use...**
+# Workout Tracker — Flask Web App
 
-A lightweight workout logger with **user accounts**, a clean web interface, and persistent storage in SQLite. Log your sets, view your history, and manage progress all in one place.
+**Projects you can ACTUALLY use...** A lightweight workout logger with **user accounts**, a clean web interface, and persistent storage in SQLite. Log your sets, view your history, and manage progress all in one place.
 
 ![Made with Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000?logo=flask) ![SQLite](https://img.shields.io/badge/SQLite-3-07405e?logo=sqlite&logoColor=white)
 
