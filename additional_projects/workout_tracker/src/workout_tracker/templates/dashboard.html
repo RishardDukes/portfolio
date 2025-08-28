@@ -11,30 +11,33 @@
       </label>
     </p>
 
-    <!-- Sets: number input + linked range slider -->
+    <!-- Sets: number + lightning slider -->
     <p>
       <label>Sets
         <input type="number" name="sets" id="sets_num" min="0" max="10" value="3">
       </label>
-      <input type="range" id="sets_range" min="0" max="10" value="3" style="width: 260px; vertical-align: middle; margin-left: .5rem;">
+      <input type="range" id="sets_range" class="slider-bolt" min="0" max="10" value="3">
+      <span class="bolt">⚡</span>
       <span id="sets_value" aria-hidden="true">3</span>
     </p>
 
-    <!-- Reps: number input + linked range slider -->
+    <!-- Reps: number + lightning slider -->
     <p>
       <label>Reps
         <input type="number" name="reps" id="reps_num" min="0" max="30" value="8">
       </label>
-      <input type="range" id="reps_range" min="0" max="30" value="8" style="width: 260px; vertical-align: middle; margin-left: .5rem;">
+      <input type="range" id="reps_range" class="slider-bolt" min="0" max="30" value="8">
+      <span class="bolt">⚡</span>
       <span id="reps_value" aria-hidden="true">8</span>
     </p>
 
-    <!-- Weight: number input (step=1) + linked range slider -->
+    <!-- Weight: number (step=1) + lightning slider -->
     <p>
       <label>Weight (lbs)
         <input type="number" name="weight" id="weight_num" min="0" max="500" step="1" value="135">
       </label>
-      <input type="range" id="weight_range" min="0" max="500" step="1" value="135" style="width: 260px; vertical-align: middle; margin-left: .5rem;">
+      <input type="range" id="weight_range" class="slider-bolt" min="0" max="500" step="1" value="135">
+      <span class="bolt">⚡</span>
       <span id="weight_value" aria-hidden="true">135</span>
     </p>
 
@@ -59,7 +62,7 @@
 <section>
   <h3>Your recent workouts</h3>
   <div id="status"></div>
-  <table id="workouts-table" border="1" cellpadding="6" cellspacing="0">
+  <table id="workouts-table" cellpadding="6" cellspacing="0">
     <thead>
       <tr>
         <th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th><th>Actions</th>
