@@ -21,7 +21,7 @@
 # from repo root
 cd additional_projects/workout_tracker
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements2.txt
 ```
 
 Create a `.env` file at the repo root:
