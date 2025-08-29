@@ -10,8 +10,13 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/workspaces/portfolio/.venv/bin/python"
-      }
+        "python.defaultInterpreterPath": "/workspaces/portfolio/.venv/bin/python",
+        "python.analysis.typeCheckingMode": "off"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
     }
   }
 }
