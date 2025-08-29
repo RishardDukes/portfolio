@@ -1,8 +1,12 @@
 from datetime import datetime, date
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, abort
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import login_required, current_user
 from .db import db
 from .models import Workout
+
+# define the blueprint
+main_bp = Blueprint("main", __name__)
+
 
 main = Blueprint("main", __name__)
 
@@ -107,3 +111,6 @@ def delete_workout(wid):
     if w.user_id != current_user.id: abort(403)
     db.session.delete(w); db.session.commit()
     return "", 204
+    
+# Back-compat export for older imports like `from .routes import main`
+main = main_bp
