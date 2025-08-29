@@ -32,23 +32,29 @@ def _to_dict(w: Workout):
         "updated_at": w.updated_at.isoformat() if w.updated_at else None,
     }
 
-@main.route("/api/workouts", methods=["GET"])
+@main_bp.route("/api/workouts", methods=["GET"])
 @login_required
 def list_workouts():
-    q = Workout.query.filter_by(user_id=current_user.id)
-    exercise = request.args.get("exercise")
-    if exercise:
-        q = q.filter(Workout.exercise.ilike(f"%{exercise}%"))
-    date_from = request.args.get("date_from")
-    date_to = request.args.get("date_to")
-    if date_from:
-        try: q = q.filter(Workout.date >= date.fromisoformat(date_from))
-        except ValueError: pass
-    if date_to:
-        try: q = q.filter(Workout.date <= date.fromisoformat(date_to))
-        except ValueError: pass
-    items = q.order_by(Workout.date.desc(), Workout.id.desc()).all()
-    return jsonify([_to_dict(w) for w in items])
+    # newest first: by date DESC, then id DESC as a tie-breaker
+    rows = (
+        Workout.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Workout.date.desc(), Workout.id.desc())
+        .all()
+    )
+    return jsonify([
+        {
+            "id": w.id,
+            "date": w.date.isoformat() if hasattr(w.date, "isoformat") else w.date,
+            "exercise": w.exercise,
+            "sets": w.sets,
+            "reps": w.reps,
+            "weight": w.weight,
+            "notes": w.notes or "",
+        }
+        for w in rows
+    ])
+
 
 @main.route("/api/workouts", methods=["POST"])
 @login_required
