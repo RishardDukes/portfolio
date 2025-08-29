@@ -1,4 +1,74 @@
-// === Helpers ===
+// =============== Low-latency success sound (Web Audio) ===============
+let dingCtx, dingBuffer, dingReady = false;
+
+async function loadDing(url) {
+  try {
+    dingCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const unlock = () => {
+      if (dingCtx && dingCtx.state === "suspended") {
+        dingCtx.resume().catch(() => {});
+      }
+      window.removeEventListener("click", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("click", unlock, { once: true });
+    window.addEventListener("touchstart", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+
+    const res = await fetch(url, { cache: "force-cache" });
+    const arr = await res.arrayBuffer();
+    // decode may be async; await ensures it's ready
+    dingBuffer = await dingCtx.decodeAudioData(arr);
+    dingReady = true;
+  } catch (e) {
+    console.warn("Ding preload failed; will fall back to <audio>.", e);
+    dingReady = false;
+  }
+}
+
+/**
+ * Play the ding and resolve when playback has STARTED.
+ * - WebAudio: starts immediately; resolve on next tick
+ * - <audio>: wait for play() Promise to resolve (started) or fail
+ */
+function playDingAsync() {
+  return new Promise((resolve) => {
+    if (dingReady && dingCtx && dingBuffer) {
+      try {
+        const src = dingCtx.createBufferSource();
+        src.buffer = dingBuffer;
+        src.connect(dingCtx.destination);
+        src.start(0);
+        // Resolve next tick to ensure start
+        setTimeout(resolve, 0);
+        return;
+      } catch (_) {
+        // fall through to <audio> fallback
+      }
+    }
+    const el = document.getElementById("success-sound");
+    if (el) {
+      el.currentTime = 0;
+      const p = el.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => resolve()).catch(() => resolve());
+      } else {
+        resolve();
+      }
+    } else {
+      resolve();
+    }
+  });
+}
+
+// Kick off preload as soon as DOM is ready (uses your original success.mp3)
+document.addEventListener("DOMContentLoaded", () => {
+  loadDing("/static/success.mp3"); // keep this path to your existing file
+});
+
+// ===================== Helpers & UI wiring ===========================
 function clamp(val, min, max) {
   const n = Number(val);
   if (Number.isNaN(n)) return min;
@@ -47,10 +117,14 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// === Workouts table ===
+// ======================= Workouts table ==============================
 async function fetchWorkouts() {
   try {
     const data = await jsonFetch("/api/workouts");
+
+    // (Optional) newest-first sort in the browser if server isn't sorting:
+    // data.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((b.id??0) - (a.id??0)));
+
     const tbody = document.querySelector("#workouts-table tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -99,7 +173,41 @@ function setStatus(msg, kind = "ok") {
   el.style.color = kind === "err" ? "#ffaaaa" : "#9ecbff";
 }
 
-// === Form handling ===
+/** Highlight the row that matches the payload we just sent */
+function highlightNewlyAddedRow(payload) {
+  const tbody = document.querySelector("#workouts-table tbody");
+  if (!tbody) return;
+
+  let match = null;
+  const rows = tbody.querySelectorAll("tr");
+  rows.forEach((tr) => {
+    const tds = tr.querySelectorAll("td");
+    if (tds.length < 6) return;
+    const [d, ex, sets, reps, w, notes] = tds;
+    const dateTxt = (d.textContent || "").slice(0,10);
+    if (
+      dateTxt === (payload.date || "").slice(0,10) &&
+      (ex.textContent || "") === (payload.exercise || "") &&
+      (sets.textContent || "") == String(payload.sets || "") &&
+      (reps.textContent || "") == String(payload.reps || "") &&
+      (w.textContent || "") == String(payload.weight || "") &&
+      (notes.textContent || "") === (payload.notes || "")
+    ) {
+      match = tr;
+    }
+  });
+
+  // Fallback: if we didn't find an exact row, highlight the last row
+  if (!match) match = tbody.lastElementChild;
+
+  if (match) {
+    match.classList.remove("shine"); // restart animation if applied before
+    void match.offsetWidth;          // reflow hack
+    match.classList.add("shine");
+  }
+}
+
+// ========================= Form handling ============================
 function wireForm() {
   const form = document.getElementById("log-form");
   if (!form) return;
@@ -130,12 +238,14 @@ function wireForm() {
     }
 
     try {
+      // Save on server
       await jsonFetch("/api/workouts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      // reset sensible defaults
+
+      // Reset inputs to sensible defaults
       form.exercise.value = "";
       form.sets.value = "3";
       form.reps.value = "8";
@@ -146,23 +256,26 @@ function wireForm() {
       linkNumberAndRange("reps_num", "reps_range", "reps_value");
       linkNumberAndRange("weight_num", "weight_range", "weight_value");
 
-      await fetchWorkouts();
-      setStatus("Workout added.", "ok");
+      // Wait for your original success.mp3 to START, then update UI
+      await playDingAsync();
 
-      // 🔊 Play success sound
-      const snd = document.getElementById("success-sound");
-      if (snd) {
-        snd.currentTime = 0;
-        snd.play().catch(() => {}); // ignore autoplay errors
-      }
+      // Refresh table and highlight the row we just added
+      await fetchWorkouts();
+      highlightNewlyAddedRow(payload);
+
+      setStatus("Workout added.", "ok");
     } catch (err) {
       setStatus(`Failed to add workout: ${err.message}`, "err");
     }
   });
 }
 
-// === Init ===
+// ============================ Init =================================
 document.addEventListener("DOMContentLoaded", () => {
+  wireForm();
+  fetchWorkouts();
+});
+
   wireForm();
   fetchWorkouts();
 });
