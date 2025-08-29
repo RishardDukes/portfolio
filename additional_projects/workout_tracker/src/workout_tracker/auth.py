@@ -62,7 +62,3 @@ def logout():
 
 # Backward-compat alias if something imports `auth`
 auth = auth_bp
-
-    logout_user()
-    flash("Logged out.", "info")
-    return redirect(url_for("auth.login"))
