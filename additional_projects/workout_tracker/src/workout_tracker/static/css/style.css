@@ -1,0 +1,37 @@
+/* Sparkle + glisten effect */
+.sparkle-wrap {
+  position: relative;
+}
+
+.sparkle {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+  transform: scale(0.4) rotate(45deg);
+  background: radial-gradient(circle at 30% 30%, #fff 0 30%, rgba(255,255,255,0) 31% 100%),
+              linear-gradient(#b3f0ff, #aef1d8);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0 50%);
+  pointer-events: none;
+  animation: sparkle-burst 550ms ease-out forwards;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
+}
+
+@keyframes sparkle-burst {
+  0%   { opacity: 0; transform: scale(0.4) rotate(45deg); }
+  40%  { opacity: 1; transform: scale(1.25) rotate(45deg); }
+  100% { opacity: 0; transform: scale(1.6) rotate(45deg); }
+}
+
+.glistening {
+  animation: glisten 850ms ease-out 1;
+  box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+
+@keyframes glisten {
+  0%   { box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 0 0 rgba(255,255,255,0); }
+  40%  { box-shadow: 0 0 20px rgba(80,200,255,0.45); }
+  100% { box-shadow: 0 0 0 rgba(0,0,0,0); }
+}
