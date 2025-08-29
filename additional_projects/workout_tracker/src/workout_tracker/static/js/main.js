@@ -1,24 +1,17 @@
-// static/js/main.js
+// Handles: play success.mp3 -> after it ends, POST -> render with sparkle
 const addBtn = document.getElementById('add-btn');
 const audioEl = document.getElementById('confirm-audio');
 
 function playConfirmSoundToEnd() {
   return new Promise(async (resolve, reject) => {
     try {
-      if (audioEl.readyState < 2) audioEl.load(); // ensure media is ready
+      if (audioEl.readyState < 2) audioEl.load();
       audioEl.currentTime = 0;
-
-      const onEnded = () => {
-        audioEl.removeEventListener('ended', onEnded);
-        resolve();
-      };
+      const onEnded = () => { audioEl.removeEventListener('ended', onEnded); resolve(); };
       audioEl.addEventListener('ended', onEnded, { once: true });
-
       const p = audioEl.play();
-      if (p && typeof p.then === 'function') await p; // ensure it starts
-    } catch (e) {
-      reject(e);
-    }
+      if (p && typeof p.then === 'function') await p;
+    } catch (e) { reject(e); }
   });
 }
 
@@ -45,8 +38,6 @@ function renderNewWorkoutWithSparkle(workout) {
   sparkle.className = 'sparkle';
   li.appendChild(sparkle);
   list?.prepend(li);
-
-  // Let the glisten fade, then clean up the class
   setTimeout(() => li.classList.remove('glistening'), 900);
 }
 
@@ -73,35 +64,20 @@ function getWorkoutFormData() {
 
 addBtn?.addEventListener('click', async () => {
   try {
-    // 1) Hard-play sound, wait until it ENDS
-    await playConfirmSoundToEnd();
-
-    // 2) Then add the workout
+    await playConfirmSoundToEnd(); // 1) play sound fully
     const payload = getWorkoutFormData();
-    if (!payload.name) {
-      alert('Please enter a workout name.');
-      return;
-    }
-    const created = await createWorkout(payload);
-
-    // 3) Render with sparkle ✨
-    renderNewWorkoutWithSparkle(created);
-
-    // 4) Clear form
+    if (!payload.name) { alert('Please enter a workout name.'); return; }
+    const created = await createWorkout(payload); // 2) now add
+    renderNewWorkoutWithSparkle(created);         // 3) sparkle ✨
+    // clear form
     document.getElementById('workout-name')?.value = '';
     document.getElementById('workout-reps')?.value = '';
     document.getElementById('workout-sets')?.value = '';
   } catch (err) {
     console.warn('Sound failed or add failed:', err);
-    const proceed = confirm(
-      "Sound couldn't play (muted/autoplay blocked). Add workout anyway?"
-    );
-    if (proceed) {
+    if (confirm("Sound couldn't play (muted/autoplay blocked). Add workout anyway?")) {
       const payload = getWorkoutFormData();
-      if (!payload.name) {
-        alert('Please enter a workout name.');
-        return;
-      }
+      if (!payload.name) { alert('Please enter a workout name.'); return; }
       createWorkout(payload)
         .then(renderNewWorkoutWithSparkle)
         .catch(e => alert(e.message || 'Failed to add workout.'));
