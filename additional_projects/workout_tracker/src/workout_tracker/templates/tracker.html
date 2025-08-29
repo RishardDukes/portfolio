@@ -1,5 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Tracker</h2>
-<p>This page will become your analytics/charts later. For now, use the Dashboard form to add workouts.</p>
+
+<!-- Quick add form -->
+<form id="add-form" style="display:grid; gap:.6rem; margin-bottom:1rem;">
+  <label>Workout <input id="workout-name" type="text" placeholder="Bench Press"></label>
+  <label>Sets <input id="workout-sets" type="number" min="1" value="3"></label>
+  <label>Reps <input id="workout-reps" type="number" min="1" value="10"></label>
+  <button id="add-btn" type="button">Add</button>
+</form>
+
+<h3>Recent</h3>
+<ul id="workout-list" style="list-style:none; padding-left:0; display:grid; gap:.5rem;"></ul>
+
+<p style="opacity:.8; margin-top:1rem;">
+  This page will become your analytics/charts later.
+</p>
 {% endblock %}
