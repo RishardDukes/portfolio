@@ -1,1 +1,0 @@
-web: gunicorn "additional_projects.workout_tracker.src.workout_tracker:create_app()" -b 0.0.0.0:$PORT
