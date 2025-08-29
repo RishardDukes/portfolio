@@ -1,25 +1,23 @@
-// main.js - Handles Add button sound + sparkle effect
+// static/js/main.js
 const addBtn = document.getElementById('add-btn');
 const audioEl = document.getElementById('confirm-audio');
 
-async function playConfirmSoundToEnd() {
+function playConfirmSoundToEnd() {
   return new Promise(async (resolve, reject) => {
     try {
-      if (audioEl.readyState < 2) {
-        audioEl.load();
-      }
+      if (audioEl.readyState < 2) audioEl.load(); // ensure media is ready
       audioEl.currentTime = 0;
+
       const onEnded = () => {
         audioEl.removeEventListener('ended', onEnded);
         resolve();
       };
       audioEl.addEventListener('ended', onEnded, { once: true });
-      const playPromise = audioEl.play();
-      if (playPromise && typeof playPromise.then === 'function') {
-        await playPromise;
-      }
-    } catch (err) {
-      reject(err);
+
+      const p = audioEl.play();
+      if (p && typeof p.then === 'function') await p; // ensure it starts
+    } catch (e) {
+      reject(e);
     }
   });
 }
@@ -47,6 +45,8 @@ function renderNewWorkoutWithSparkle(workout) {
   sparkle.className = 'sparkle';
   li.appendChild(sparkle);
   list?.prepend(li);
+
+  // Let the glisten fade, then clean up the class
   setTimeout(() => li.classList.remove('glistening'), 900);
 }
 
@@ -73,18 +73,38 @@ function getWorkoutFormData() {
 
 addBtn?.addEventListener('click', async () => {
   try {
+    // 1) Hard-play sound, wait until it ENDS
     await playConfirmSoundToEnd();
+
+    // 2) Then add the workout
     const payload = getWorkoutFormData();
     if (!payload.name) {
       alert('Please enter a workout name.');
       return;
     }
     const created = await createWorkout(payload);
+
+    // 3) Render with sparkle ✨
     renderNewWorkoutWithSparkle(created);
+
+    // 4) Clear form
     document.getElementById('workout-name')?.value = '';
     document.getElementById('workout-reps')?.value = '';
     document.getElementById('workout-sets')?.value = '';
   } catch (err) {
-    console.error('Error adding workout:', err);
+    console.warn('Sound failed or add failed:', err);
+    const proceed = confirm(
+      "Sound couldn't play (muted/autoplay blocked). Add workout anyway?"
+    );
+    if (proceed) {
+      const payload = getWorkoutFormData();
+      if (!payload.name) {
+        alert('Please enter a workout name.');
+        return;
+      }
+      createWorkout(payload)
+        .then(renderNewWorkoutWithSparkle)
+        .catch(e => alert(e.message || 'Failed to add workout.'));
+    }
   }
 });
