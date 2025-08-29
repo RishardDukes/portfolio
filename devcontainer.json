@@ -1,0 +1,17 @@
+{
+  "name": "Workout Tracker",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "forwardPorts": [5000],
+  "postCreateCommand": "python3 -m venv .venv && bash -lc 'source .venv/bin/activate && pip install --upgrade pip && pip install -r additional_projects/workout_tracker/requirements2.txt'",
+  "postStartCommand": "bash -lc 'source .venv/bin/activate && python run.py &'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/workspaces/portfolio/.venv/bin/python"
+      }
+    }
+  }
+}
