@@ -90,7 +90,7 @@ Pattern discovery on medical imaging using Self-Organizing Maps (demo currently 
 ### Workout Tracker — Widget + CLI *(Additional Project)*
 **What is it?**  
 Local SQLite workout logger with a small Flask widget UI and a simple CLI for adding sets and plotting progress.  
-**Tech Involved:** Python, Flask, Matplotlib, SQLite  
+**Tech Involved:** Python, Flask, Matplotlib, SQLite, CSS  
 **Repo:** [View Project](additional_projects/workout_tracker)
 
 ---
