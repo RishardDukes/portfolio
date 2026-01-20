@@ -1,6 +1,7 @@
 # additional_projects/workout_tracker/src/workout_tracker/widget_app.py
 from flask import Flask, request, jsonify, send_from_directory
 from workout_tracker.db import get_conn, insert_log, fetch_logs_with_id, delete_log
+from workout_tracker.hercules.engine import HerculesCoach, ExerciseTarget
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -42,20 +43,33 @@ def add():
         reps = int(data["reps"])
     except ValueError:
         return jsonify({"error": "Invalid weight or reps"}), 400
+
+    # Insert the set (original behavior)
     insert_log(data["date"], data["exercise"], weight, reps)
-    return jsonify({"status": "ok"})
 
-@app.post("/api/delete")
-def delete():
-    data = request.get_json(force=True)
-    try:
-        row_id = int(data["id"])
-    except Exception:
-        return jsonify({"error": "Missing or invalid id"}), 400
-    delete_log(row_id)
-    return jsonify({"status": "deleted", "id": row_id})
+    # --- HERCULES COACHING ---
+    rows = fetch_logs_with_id(data["exercise"], 10)
 
+    coach = HerculesCoach()
+    target = ExerciseTarget(
+        rep_min=8,
+        rep_max=12,
+        is_compound=True,
+        is_machine=True
+    )
 
-if __name__ == "__main__":
-    # Codespaces-friendly host/port
-    app.run(host="0.0.0.0", port=7860, debug=True)
+    hercules_msg = None
+
+    if rows:
+        _, _, last_weight, last_reps = rows[0]  # most recent set
+        rec = coach.recommend_next_action(
+            weight=float(last_weight),
+            reps=int(last_reps),
+            rir=None,
+            target=target,
+        )
+        hercules_msg = rec["message"]
+
+    return jsonify({
+        "
+
