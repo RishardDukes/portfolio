@@ -1,0 +1,23 @@
+John Smith
+john.smith@email.com
+(555) 123-4567
+New York, NY
+
+PROFESSIONAL SUMMARY
+Experienced software engineer with 5+ years in Python and web development.
+
+EXPERIENCE
+Senior Developer - Tech Company (2020-2024)
+- Led team of 5 developers
+- Increased performance by 40%
+
+Junior Developer - StartUp (2019-2020)
+- Built REST APIs using Flask
+- Implemented database schemas
+
+EDUCATION
+Bachelor of Science in Computer Science
+University of California (2019)
+
+SKILLS
+Python, Flask, JavaScript, React, SQL, PostgreSQL, Git, Docker

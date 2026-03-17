@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tax Return AI Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area.dragover {
+            background: #e6e9ff;
+            border-color: #764ba2;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: #f0f9ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .result-item {
+            margin: 10px 0;
+            color: #333;
+        }
+        
+        .result-value {
+            font-weight: bold;
+            color: #764ba2;
+            font-size: 1.2em;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee;
+            border-left-color: #c33;
+            color: #c33;
+        }
+        
+        .success {
+            background: #efe;
+            border-left-color: #3c3;
+            color: #3c3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Tax Return AI Calculator</h1>
+        <p class="subtitle">Upload your tax documents and let AI calculate your returns</p>
+        
+        <!-- Document Upload Section -->
+        <div class="section">
+            <h2>📄 Upload Documents</h2>
+            <div class="upload-area" id="uploadArea">
+                <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.txt">
+                <p><strong>Drag and drop your documents here</strong></p>
+                <p style="color: #999; font-size: 0.9em;">or click to browse (PDF, Images, Text)</p>
+            </div>
+        </div>
+        
+        <!-- Manual Entry Section -->
+        <div class="section">
+            <h2>💼 Enter Financial Information</h2>
+            
+            <div class="form-group">
+                <label for="grossIncome">Gross Income ($)</label>
+                <input type="number" id="grossIncome" placeholder="e.g., 75000" min="0" step="0.01">
+            </div>
+            
+            <div class="form-group">
+                <label for="deductions">Deductions ($)</label>
+                <input type="number" id="deductions" placeholder="e.g., 13850 (standard) or more (itemized)" min="0" step="0.01">
+            </div>
+            
+            <div class="form-group">
+                <label for="withheld">Total Tax Withheld ($)</label>
+                <input type="number" id="withheld" placeholder="e.g., 10000" min="0" step="0.01">
+            </div>
+            
+            <div class="form-group">
+                <label for="credits">Tax Credits ($)</label>
+                <input type="number" id="credits" placeholder="e.g., 500 (Child Tax Credit, etc.)" min="0" step="0.01">
+            </div>
+            
+            <button onclick="calculateTax()">Calculate Tax Return</button>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Calculating...</p>
+        </div>
+        
+        <!-- Results Section -->
+        <div class="result" id="result">
+            <h3>📊 Tax Calculation Results</h3>
+            <div class="result-item">
+                <span>Tax Owed:</span>
+                <span class="result-value" id="taxOwed">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span>Total Withheld:</span>
+                <span class="result-value" id="totalWithheld">$0.00</span>
+            </div>
+            <div class="result-item">
+                <span>Refund / Amount Owed:</span>
+                <span class="result-value" id="refund">$0.00</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+        
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.success) {
+                    // Populate form with extracted data
+                    if (data.extracted_data.gross_income) {
+                        document.getElementById('grossIncome').value = data.extracted_data.gross_income;
+                    }
+                    if (data.extracted_data.tax_withheld) {
+                        document.getElementById('withheld').value = data.extracted_data.tax_withheld;
+                    }
+                    alert('Document processed! Review and adjust values if needed.');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                alert('Upload failed: ' + error);
+            });
+        }
+        
+        function calculateTax() {
+            const grossIncome = parseFloat(document.getElementById('grossIncome').value);
+            const deductions = parseFloat(document.getElementById('deductions').value);
+            const withheld = parseFloat(document.getElementById('withheld').value);
+            const credits = parseFloat(document.getElementById('credits').value);
+            
+            if (!grossIncome) {
+                alert('Please enter gross income');
+                return;
+            }
+            
+            const payload = {
+                gross_income: grossIncome,
+                deductions: deductions || 0,
+                tax_withheld: withheld || 0,
+                credits: credits || 0
+            };
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('/api/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                if (data.success) {
+                    const calc = data.calculation;
+                    document.getElementById('taxOwed').textContent = '$' + calc.tax_owed.toFixed(2);
+                    document.getElementById('totalWithheld').textContent = '$' + calc.total_withheld.toFixed(2);
+                    
+                    const refundKey = 'refund' in calc ? 'refund' : 'amount_owed';
+                    const refundValue = calc[refundKey];
+                    const refundText = 'refund' in calc ? 'Refund: +' : 'Amount Owed: -';
+                    document.getElementById('refund').textContent = refundText + '$' + refundValue.toFixed(2);
+                    
+                    document.getElementById('result').classList.add('show');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                alert('Calculation failed: ' + error);
+            });
+        }
+    </script>
+</body>
+</html>
