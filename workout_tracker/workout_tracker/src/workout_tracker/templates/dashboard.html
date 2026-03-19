@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Workout Tracker{% endblock %}
+{% block content %}
+<style>
+  .dashboard-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .dashboard-hero {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1.2fr 0.8fr;
+    align-items: stretch;
+  }
+
+  .panel {
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.035);
+    border-radius: 20px;
+    padding: 1rem;
+  }
+
+  .hero-copy h2, .panel h3 { margin-top: 0; }
+  .hero-copy p, .subtle { color: var(--muted); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 18px;
+    padding: 0.95rem;
+  }
+  .stat-card span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+  .stat-card strong {
+    font-size: 1.5rem;
+  }
+
+  .form-grid {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .field-stack {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 120px 1fr auto auto;
+    gap: 0.6rem;
+    align-items: center;
+  }
+
+  .bolt {
+    color: var(--gold);
+    font-size: 1.1rem;
+    text-shadow: 0 0 6px rgba(255, 212, 77, 0.55);
+  }
+
+  .value-pill {
+    min-width: 2.5rem;
+    text-align: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .status-box {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .coach-box {
+    background: linear-gradient(180deg, rgba(158,203,255,0.16), rgba(255,212,77,0.08));
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+
+  th, td {
+    padding: 0.8rem 0.7rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  thead th {
+    color: var(--muted);
+    font-weight: 600;
+    background: rgba(255,255,255,0.04);
+  }
+
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+  .delete-btn {
+    background: rgba(255,120,120,0.16);
+    color: #ffd9d9;
+    box-shadow: none;
+  }
+
+  @media (max-width: 860px) {
+    .dashboard-hero,
+    .stats-grid,
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .range-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="dashboard-grid">
+  <section class="dashboard-hero">
+    <div class="panel hero-copy">
+      <h2>Welcome back, {{ current_user.first_name }}</h2>
+      <p>Log your work fast, review recent sessions, and get a next-set recommendation from Hercules after every entry.</p>
+      <div class="stats-grid">
+        <div class="stat-card"><span>Total workouts</span><strong id="stat-total-workouts">0</strong></div>
+        <div class="stat-card"><span>Unique lifts</span><strong id="stat-unique-exercises">0</strong></div>
+        <div class="stat-card"><span>Total volume</span><strong id="stat-total-volume">0</strong></div>
+        <div class="stat-card"><span>Recent PR</span><strong id="stat-recent-pr">0</strong></div>
+      </div>
+    </div>
+
+    <div class="panel coach-box">
+      <h3>Hercules Coach</h3>
+      <p class="subtle">Rule-based progression advice for the next set.</p>
+      <div id="coach-status" class="status-box">Ready when you are.</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Log workout</h3>
+    <form id="log-form" class="form-grid">
+      <div class="field-stack">
+        <label for="exercise">Exercise</label>
+        <input type="text" name="exercise" id="exercise" placeholder="e.g. Barbell Bench Press" required>
+      </div>
+
+      <div class="field-stack">
+        <label for="date">Date</label>
+        <input type="date" name="date" id="date" value="{{ now().date() if now else '' }}">
+      </div>
+
+      <div class="field-stack full-width">
+        <label>Sets</label>
+        <div class="range-row">
+          <input type="number" name="sets" id="sets_num" min="1" max="10" value="3">
+          <input type="range" id="sets_range" class="slider-bolt" min="1" max="10" value="3">
+          <span class="bolt">⚡</span>
+          <span id="sets_value" class="value-pill">3</span>
+        </div>
+      </div>
+
+      <div class="field-stack full-width">
+        <label>Reps</label>
+        <div class="range-row">
+          <input type="number" name="reps" id="reps_num" min="1" max="30" value="8">
+          <input type="range" id="reps_range" class="slider-bolt" min="1" max="30" value="8">
+          <span class="bolt">⚡</span>
+          <span id="reps_value" class="value-pill">8</span>
+        </div>
+      </div>
+
+      <div class="field-stack full-width">
+        <label>Weight (lbs)</label>
+        <div class="range-row">
+          <input type="number" name="weight" id="weight_num" min="0" max="800" step="2.5" value="135">
+          <input type="range" id="weight_range" class="slider-bolt" min="0" max="800" step="2.5" value="135">
+          <span class="bolt">⚡</span>
+          <span id="weight_value" class="value-pill">135</span>
+        </div>
+      </div>
+
+      <div class="field-stack full-width">
+        <label for="notes">Notes</label>
+        <textarea name="notes" id="notes" placeholder="Optional notes: pause reps, close-grip, tempo, etc."></textarea>
+      </div>
+
+      <div class="full-width" style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <button type="submit">Add workout</button>
+        <div id="status" class="subtle">Nothing queued yet.</div>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h3>Recent workouts</h3>
+    <div class="subtle" style="margin-bottom:0.8rem;">Newest first. Delete removes the entry immediately.</div>
+    <div style="overflow-x:auto;">
+      <table id="workouts-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Exercise</th>
+            <th>Sets</th>
+            <th>Reps</th>
+            <th>Weight</th>
+            <th>Volume</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="workouts-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
