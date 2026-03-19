@@ -1,14 +1,12 @@
-# workout_tracker/cli.py
 import argparse
 from .db import insert_log, fetch_logs
 from .charts import plot_progress
-from workout_tracker.hercules.engine import HerculesCoach, ExerciseTarget
+from .hercules.engine import HerculesCoach, ExerciseTarget
 
 def suggest_next_weight(rows):
     if not rows:
         return "Hercules: No history yet. Start at a comfortable weight and log your sets."
 
-    # rows: (date, weight, reps)
     d, w, r = rows[-1]
 
     coach = HerculesCoach()
@@ -26,7 +24,10 @@ def suggest_next_weight(rows):
         target=target
     )
 
-    return f"Hercules: {rec['message']} (next weight: {rec['next_weight']}, next rep goal: {rec['next_rep_goal']})"
+    return (
+        f"Hercules: {rec['message']} "
+        f"(next weight: {rec['next_weight']}, next rep goal: {rec['next_rep_goal']})"
+    )
 
 def cmd_add(a):
     insert_log(a.date, a.exercise, a.weight, a.reps)
@@ -71,4 +72,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

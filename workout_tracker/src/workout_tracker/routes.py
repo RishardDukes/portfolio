@@ -1,3 +1,4 @@
+from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from flask_login import login_required, current_user
 from .db import db
@@ -7,7 +8,6 @@ main_bp = Blueprint("main", __name__)
 
 @main_bp.route("/")
 def home():
-    # Redirect signed-in users to dashboard; guests go to login
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
     return redirect(url_for("auth.login"))
@@ -20,10 +20,8 @@ def dashboard():
 @main_bp.route("/tracker")
 @login_required
 def tracker():
-    # If you don't have tracker.html yet, you can reuse dashboard.html
     return render_template("tracker.html")
 
-# -------- API: newest first --------
 @main_bp.route("/api/workouts", methods=["GET"])
 @login_required
 def list_workouts():
@@ -50,9 +48,19 @@ def list_workouts():
 @login_required
 def create_workout():
     data = request.get_json(force=True) or {}
+
+    raw_date = data.get("date")
+    parsed_date = None
+
+    if raw_date:
+        try:
+            parsed_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
     w = Workout(
         user_id=current_user.id,
-        date=data.get("date"),
+        date=parsed_date,
         exercise=(data.get("exercise") or "").strip(),
         sets=int(data.get("sets") or 0),
         reps=int(data.get("reps") or 0),
@@ -73,5 +81,4 @@ def delete_workout(wid):
     db.session.commit()
     return jsonify({"ok": True})
 
-# Back-compat alias if something imports `main`
 main = main_bp

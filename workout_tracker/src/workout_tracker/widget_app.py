@@ -1,7 +1,6 @@
-# additional_projects/workout_tracker/src/workout_tracker/widget_app.py
 from flask import Flask, request, jsonify, send_from_directory
-from workout_tracker.db import get_conn, insert_log, fetch_logs_with_id, delete_log
-from workout_tracker.hercules.engine import HerculesCoach, ExerciseTarget
+from .db import get_conn, insert_log, fetch_logs_with_id, delete_log
+from .hercules.engine import HerculesCoach, ExerciseTarget
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -38,16 +37,15 @@ def add():
     for k in ("date", "exercise", "weight", "reps"):
         if k not in data:
             return jsonify({"error": f"Missing field {k}"}), 400
+
     try:
         weight = float(data["weight"])
         reps = int(data["reps"])
     except ValueError:
         return jsonify({"error": "Invalid weight or reps"}), 400
 
-    # Insert the set (original behavior)
     insert_log(data["date"], data["exercise"], weight, reps)
 
-    # --- HERCULES COACHING ---
     rows = fetch_logs_with_id(data["exercise"], 10)
 
     coach = HerculesCoach()
@@ -61,7 +59,7 @@ def add():
     hercules_msg = None
 
     if rows:
-        _, _, last_weight, last_reps = rows[0]  # most recent set
+        _, _, last_weight, last_reps = rows[0]
         rec = coach.recommend_next_action(
             weight=float(last_weight),
             reps=int(last_reps),
@@ -71,5 +69,7 @@ def add():
         hercules_msg = rec["message"]
 
     return jsonify({
-        "
-
+        "ok": True,
+        "message": "Workout logged successfully.",
+        "hercules": hercules_msg
+    })

@@ -1,14 +1,14 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Workout Tracker</title>
   <style>
     :root {
-      --bg: #2e2e2e;     /* dark grey */
-      --text: #f5f5f5;   /* light text */
-      --link: #9ecbff;   /* soft blue links */
+      --bg: #2e2e2e;
+      --text: #f5f5f5;
+      --link: #9ecbff;
       --card: rgba(0, 0, 0, 0.6);
       --shadow: rgba(0, 0, 0, 0.4);
       --emoji-opacity: 0.20;
@@ -34,9 +34,15 @@
       color: var(--link);
       text-decoration: none;
     }
-    nav a:hover { text-decoration: underline; }
 
-    .flash { padding: 0.4rem 0; color: #ffaaaa; }
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .flash {
+      padding: 0.4rem 0;
+      color: #ffaaaa;
+    }
 
     .content-card {
       background: var(--card);
@@ -44,16 +50,16 @@
       border-radius: 12px;
       box-shadow: 0 2px 8px var(--shadow);
       position: relative;
-      z-index: 2; /* above background stickers */
+      z-index: 2;
     }
 
-    /* Background “stickers” layer */
     .emoji-bg {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 1;
     }
+
     .emoji-bg span {
       position: absolute;
       font-size: var(--emoji-size);
@@ -62,7 +68,6 @@
       user-select: none;
     }
 
-    /* ⚡ Lightning slider theme */
     .slider-bolt {
       -webkit-appearance: none;
       appearance: none;
@@ -71,11 +76,12 @@
       background: linear-gradient(90deg, #ffea00, #ff8c00);
       border-radius: 4px;
       outline: none;
-      margin-left: .5rem;
+      margin-left: 0.5rem;
       vertical-align: middle;
       cursor: pointer;
       box-shadow: 0 0 6px rgba(255, 234, 0, 0.35);
     }
+
     .slider-bolt::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
@@ -87,6 +93,7 @@
       box-shadow: 0 0 10px #ffea00, 0 0 16px rgba(255, 140, 0, 0.5);
       cursor: pointer;
     }
+
     .slider-bolt::-moz-range-thumb {
       width: 22px;
       height: 22px;
@@ -96,6 +103,7 @@
       box-shadow: 0 0 10px #ffea00, 0 0 16px rgba(255, 140, 0, 0.5);
       cursor: pointer;
     }
+
     .bolt {
       font-size: 1.2rem;
       margin-left: 0.3rem;
@@ -104,34 +112,63 @@
       user-select: none;
     }
 
-    /* small form tweaks */
-    label { display: inline-flex; gap: .5rem; align-items: center; }
-    input[type="number"], input[type="text"], input[type="date"], textarea {
+    label {
+      display: inline-flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    input[type="date"],
+    textarea {
       background: #1f1f1f;
       color: var(--text);
       border: 1px solid #444;
       border-radius: 8px;
-      padding: .45rem .6rem;
+      padding: 0.45rem 0.6rem;
     }
+
     button {
       background: #9ecbff;
       color: #0b2239;
       border: none;
       border-radius: 10px;
-      padding: .55rem .9rem;
+      padding: 0.55rem 0.9rem;
       cursor: pointer;
       font-weight: 600;
     }
-    button:hover { filter: brightness(1.05); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #444; padding: .45rem .5rem; }
-    thead th { background: #1f1f1f; }
 
-    /* ✨ Sparkle + glisten effect */
-    .sparkle-wrap { position: relative; }
+    button:hover {
+      filter: brightness(1.05);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #444;
+      padding: 0.45rem 0.5rem;
+    }
+
+    thead th {
+      background: #1f1f1f;
+    }
+
+    .sparkle-wrap {
+      position: relative;
+    }
+
     .sparkle {
-      position: absolute; top: -8px; right: -8px; width: 14px; height: 14px;
-      opacity: 0; transform: scale(0.4) rotate(45deg);
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 14px;
+      height: 14px;
+      opacity: 0;
+      transform: scale(0.4) rotate(45deg);
       background:
         radial-gradient(circle at 30% 30%, #fff 0 30%, rgba(255,255,255,0) 31% 100%),
         linear-gradient(#b3f0ff, #aef1d8);
@@ -140,12 +177,18 @@
       animation: sparkle-burst 550ms ease-out forwards;
       filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
     }
+
     @keyframes sparkle-burst {
       0% { opacity: 0; transform: scale(0.4) rotate(45deg); }
       40% { opacity: 1; transform: scale(1.25) rotate(45deg); }
       100% { opacity: 0; transform: scale(1.6) rotate(45deg); }
     }
-    .glistening { animation: glisten 850ms ease-out 1; box-shadow: 0 0 0 rgba(0,0,0,0); }
+
+    .glistening {
+      animation: glisten 850ms ease-out 1;
+      box-shadow: 0 0 0 rgba(0,0,0,0);
+    }
+
     @keyframes glisten {
       0% { box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 0 0 rgba(255,255,255,0); }
       40% { box-shadow: 0 0 20px rgba(80,200,255,0.45); }
@@ -154,9 +197,11 @@
   </style>
 </head>
 <body>
-  <!-- subtle background stickers: 10x 💪 and 10x 🏋️ -->
+  <audio id="bg-music" loop>
+    <source src="{{ url_for('static', filename='sounds/background.mp3') }}" type="audio/mpeg">
+  </audio>
+
   <div class="emoji-bg">
-    <!-- 💪 (10) -->
     <span style="top:5%; left:8%;">💪</span>
     <span style="top:12%; left:72%;">💪</span>
     <span style="top:22%; left:28%;">💪</span>
@@ -168,7 +213,6 @@
     <span style="top:82%; left:18%;">💪</span>
     <span style="top:90%; left:55%;">💪</span>
 
-    <!-- 🏋️ (10) -->
     <span style="top:7%; left:48%;">🏋️</span>
     <span style="top:16%; left:18%;">🏋️</span>
     <span style="top:27%; left:58%;">🏋️</span>
@@ -189,7 +233,9 @@
     <a href="{{ url_for('auth.register') }}">Register</a>
     <a href="{{ url_for('auth.logout') }}">Logout</a>
   </nav>
+
   <hr />
+
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, msg in messages %}
@@ -197,16 +243,30 @@
       {% endfor %}
     {% endif %}
   {% endwith %}
+
   <div class="content-card">
     {% block content %}{% endblock %}
   </div>
 
-  <!-- 🔊 Audio element used by main.js -->
-  <audio id="confirm-audio"
-         src="{{ url_for('static', filename='sounds/success.mp3') }}"
-         preload="auto"></audio>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const bg = document.getElementById("bg-music");
+      if (!bg) return;
 
-  <!-- App JS (handles sound + sparkle + POST) -->
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+      bg.volume = 0.2;
+
+      bg.play().catch(() => {
+        console.log("Autoplay blocked — waiting for first click.");
+      });
+
+      document.addEventListener("click", () => {
+        if (bg.paused) {
+          bg.play().catch(() => {});
+        }
+      }, { once: true });
+    });
+  </script>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
