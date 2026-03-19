@@ -75,6 +75,33 @@ function setCoachMessage(message) {
   if (coach) coach.textContent = message;
 }
 
+function setLatestCoachPanel(result) {
+  const messageEl = qs("hercules-last-message");
+  const statusEl = qs("hercules-last-status");
+  const weightEl = qs("hercules-last-weight");
+  const repsEl = qs("hercules-last-reps");
+
+  const coachText =
+    typeof result?.hercules === "string"
+      ? result.hercules
+      : result?.hercules?.message || "Hercules is ready for the next entry.";
+
+  if (messageEl) messageEl.textContent = coachText;
+  if (statusEl) statusEl.textContent = result?.status || "—";
+  if (weightEl) {
+    weightEl.textContent =
+      result?.next_weight !== undefined && result?.next_weight !== null
+        ? formatWeight(result.next_weight)
+        : "—";
+  }
+  if (repsEl) {
+    repsEl.textContent =
+      result?.next_rep_goal !== undefined && result?.next_rep_goal !== null
+        ? String(result.next_rep_goal)
+        : "—";
+  }
+}
+
 function updateSummary(summary) {
   if (qs("stat-total-workouts")) {
     qs("stat-total-workouts").textContent = formatNumber(summary.total_workouts);
@@ -246,11 +273,13 @@ function wireForm() {
           : result.hercules?.message || "Hercules is ready for the next entry.";
 
       setCoachMessage(coachText);
+      setLatestCoachPanel(result);
       sparkle(document.querySelector(".content-card"));
     } catch (err) {
       console.error(err);
       setStatus("Failed to add workout.");
       setCoachMessage("Need a clean set before I can coach the next move.");
+      setLatestCoachPanel(null);
       alert(err.message);
     } finally {
       if (submitBtn) submitBtn.disabled = false;
