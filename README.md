@@ -1,12 +1,23 @@
 # Portfolio
 
 **Rishard Dukes's Online Portfolio**  
-Computational Science Grad • AI/ML & Software • Evolving IT Technician/Software Engineer from Florida State University (B.S.)
+Computational Science Grad • AI/ML & Software • IT Technician → Software/AI Engineer  
+Florida State University (B.S.)
 
 ---
 
-*Projects you can actually use.*
-That has grown into my motto. I’m a hard-working engineer who delivers clean, well-documented code that solves real problems. I’ve built numerical-methods toolkits, computer-vision pipelines, and ML demos—and I still get hands-on with practical IT work like connectivity checks and troubleshooting. I value clarity, reliability, and results.
+## *Projects you can actually use.*
+
+That has grown into my motto.
+
+This portfolio focuses on **real, functional applications**—not just academic demos. Every highlighted project is built with usability, structure, and real-world relevance in mind.
+
+I build systems that combine:
+- AI-assisted workflows  
+- full-stack development  
+- practical problem solving  
+
+---
 
 📫 **Contacts:**  
 - [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)  
@@ -15,89 +26,82 @@ That has grown into my motto. I’m a hard-working engineer who delivers clean, 
 
 ---
 
-## 🧰 Core Skills
-- **Programming:** Python, C++, MATLAB, HTML, Javascript, Rstudio
-- **ML/AI:** PCA (from scratch), CNNs (basics), clustering (K-Means), SOMs, regression  
-- **Numerical Methods:** Trapezoidal, Simpson’s, Forward/Backward Euler, Adams–Bashforth, BDF, Runge–Kutta  
-- **Image/Signal:** OpenCV, image I/O, pixel manipulation, watermarking  
-- **Tools:** Git/GitHub, VS Code, Google Colab, Virtualenv, Jupyter  
-- **IT Knowledge:** Networking fundamentals, ping/latency testing, Windows setup & support  
+# 🧰 Core Skills
+
+### 💻 Programming
+Python, C++, MATLAB, HTML, JavaScript, R
+
+### 🤖 AI / Machine Learning
+- AI-assisted workflows (OpenAI APIs, prompt engineering)  
+- Document parsing & structured extraction  
+- Clustering, PCA, and foundational ML concepts  
+
+### 🛠 Full Stack & Tools
+Flask, SQLite, REST APIs, Git/GitHub, VS Code, Virtualenv
+
+### 🌐 IT & Systems
+- Device setup & troubleshooting  
+- Networking fundamentals  
+- Workflow automation & system support  
+
+---
+# 📂 Main Projects
 
 ---
 
-## 🚀 Quickstart
+## 🧾 AI Resume Parser
 
-To run any of the projects in this portfolio:
-
-```bash
-# 1. Clone the repo
-git clone https://github.com/RishardDukes/portfolio.git
-cd portfolio
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Run a demo (choose one)
-python numerical_methods/numerical_demo.py
-python pca_faces/pca_faces_demo.py
-python kmeans_watermark/watermark_demo.py
-python som_mammograms/som_demo.py
-python ping_monitor/ping_demo.py
-```
----
-## 📂 Highlighted Projects
-
-### Numerical Integration & ODE Solvers — *Error & Convergence Suite*
 **What is it?**  
-A mini-library implementing Trapezoidal/Simpson’s rules and ODE solvers utilizing relative error tables, log–log plots, and empirical convergence orders.  
-**Tech Involved:** Python, NumPy, Matplotlib  
-**Repo:** [View Project](numerical_methods)
+An AI-powered tool that parses resumes and extracts structured information such as skills, experience, and key sections.
+
+**Why it matters:**  
+Demonstrates real-world **AI + document processing**, applicable to hiring systems, automation pipelines, and SaaS tools.
+
+**Tech:**  
+Python, NLP techniques, AI integration
 
 ---
 
-### Face Recognition via PCA (AT&T Dataset)
+## 💰 Tax Return AI Calculator
+
 **What is it?**  
-PCA from scratch for face dimensionality reduction and classification utilizing a data loader for PGM images, eigenfaces, projection + custom distance classifier.  
-**Tech Involved:** Python, NumPy, SciPy, Matplotlib  
-**Repo:** [View Project](pca_faces)
+A full-stack Flask application that processes uploaded tax documents and estimates federal tax outcomes using AI-assisted parsing.
+
+**Key Features:**
+- Upload PDFs, images, or text  
+- OCR + text extraction pipeline  
+- Backend processing routes  
+- Clean UI for results  
+
+**Tech:**  
+Python, Flask, OpenAI API, PyPDF2, Pytesseract, HTML/CSS/JS
 
 ---
 
-### Image Watermarking with K-Means
+## 🏋️ Workout Tracker + Hercules AI
+
 **What is it?**  
-Embed and extract a visible watermark using K-Means on image channels/blocks utilizing a pipeline to insert a smiley PNG watermark and recover it; analysis of quality vs. compression.  
-**Tech Involved:** Python, OpenCV, NumPy  
-**Repo:** [View Project](kmeans_watermark)
+A full-stack workout tracking system enhanced with **Hercules AI**, a built-in coaching engine that provides real-time recommendations after each logged set.
 
----
+**Key Features:**
+- User authentication (login/register)  
+- Workout logging + persistent database (SQLite)  
+- Live dashboard with stats + history  
+- Sound + interactive UI feedback  
+- AI-driven coaching system  
 
-### Ping & Network Monitor Script
-**What is it?**  
-Quick connectivity checker with clean terminal output and summary utilizing ICMP pings, latency stats, reachable/unreachable reporting.  
-**Tech Involved:** Python (subprocess), Windows/PowerShell notes  
-**Repo:** [View Project](ping_monitor)
+**Hercules AI:**
+- Analyzes performance inputs (reps, weight)  
+- Determines optimal next action:
+  - Increase weight  
+  - Decrease weight  
+  - Maintain weight  
 
----
+- Returns:
+  - Next weight target  
+  - Rep goal  
+  - Coaching message  
 
-### SOM for Mammographic Image Patterns
-**What is it?**  
-Pattern discovery on medical imaging using Self-Organizing Maps (demo currently uses sklearn digits for proof of concept).  
-**Tech Involved:** Python, scikit-learn, sklearn_som, Matplotlib  
-**Repo:** [View Project](som_mammograms)
-
----
-
-### Workout Tracker — Widget + CLI *(Additional Project)*
-**What is it?**  
-Local SQLite workout logger with a small Flask widget UI and a simple CLI for adding sets and plotting progress.  
-**Tech Involved:** Python, Flask, Matplotlib, SQLite, CSS  
-**Repo:** [View Project](additional_projects/workout_tracker)
-
----
-
-### Ping Checker 2.0 — Async uptime + HTML report *(Additional Project)*
-**What is it?**  
-Asynchronous TCP host checks with SQLite history and a static HTML report (no external dependencies).  
-**Tech Involved:** Python stdlib (`asyncio`, `sqlite3`, `argparse`, `pathlib`)  
-**Repo:** [View Project](additional_projects/ping_checker_2)
+**Tech:**  
+Python, Flask, SQLite, JavaScript, HTML/CSS
 
