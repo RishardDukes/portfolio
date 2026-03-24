@@ -1,129 +1,50 @@
-# Workout Tracker — Flask Web App
+# WIP — Workout Intelligence Platform
 
-**Projects you can ACTUALLY use...** A lightweight workout logger with **user accounts**, a clean web interface, and persistent storage in SQLite. Log your sets, view your history, and manage progress all in one place.
+A futuristic workout tracking web app built with Flask, SQLAlchemy, and vanilla JS.
 
-![Made with Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white) ![Flask](https://img.shields.io/badge/Flask-3.0+-000?logo=flask) ![SQLite](https://img.shields.io/badge/SQLite-3-07405e?logo=sqlite&logoColor=white)
+## Features
 
----
+- User registration and login
+- Log workouts by split (Push / Pull / Legs) with sets, reps, weight (lbs), and notes
+- Analytics dashboard with volume trends and top exercises
+- Hercules AI coaching tips
+- Persistent background music with futuristic UI sound effects
+- Seamless SPA-style navigation between Dashboard and Tracker
 
-## ✨ Features
-- **User accounts & login system** (via Flask-Login)
-- **Workout logging**: exercise, sets, reps, weight, notes
-- **Dashboard view**: add sets and view history (with number inputs + sliders)
-- **JSON API**: `/api/workouts` (list, create, update, delete workouts)
-- **Dark themed UI** with subtle fitness-themed background
-- **SQLite-backed** — data persists locally
+## Stack
 
----
+- **Backend:** Python, Flask, Flask-Login, Flask-SQLAlchemy
+- **Database:** SQLite (dev) — swappable via `DATABASE_URL` env var
+- **Frontend:** Vanilla JS, CSS (no frameworks)
 
-## 🚀 Quick Start (GitHub Codespaces or local)
+## Getting Started
+
 ```bash
-# from repo root
-cd additional_projects/workout_tracker
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements2.txt
-```
+# 1. Create and activate a virtual environment
+python -m venv .venv
+.venv\Scripts\activate      # Windows
+source .venv/bin/activate   # macOS/Linux
 
-Create a `.env` file at the repo root:
-```
-SECRET_KEY=dev-secret
-DATABASE_URL=sqlite:///app.db
-```
+# 2. Install dependencies
+pip install -r requirements.txt
 
-Run the app (from `portfolio/` repo root):
-```bash
+# 3. Run the app
 python run.py
 ```
 
-Open the forwarded **port 5000** → the UI loads.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
----
+## Configuration
 
-## 🖥️ Usage
-- **Register** → create an account at `/register`
-- **Login** → access your dashboard at `/login`
-- **Dashboard** → log workouts (type or use sliders), view recent history
-- **API** →  
-  - `GET /api/workouts` → list workouts  
-  - `POST /api/workouts` → create workout  
-  - `PATCH /api/workouts/<id>` → update workout  
-  - `DELETE /api/workouts/<id>` → delete workout  
+Set these environment variables to override defaults:
 
----
+| Variable | Default | Purpose |
+|---|---|---|
+| `SECRET_KEY` | `dev-secret` | Flask session signing key — **change this in production** |
+| `DATABASE_URL` | `sqlite:///app.db` | Database connection string |
 
-## 🧱 Project Structure
+```bash
+# Example .env (never commit this file)
+SECRET_KEY=your-strong-random-key
+DATABASE_URL=sqlite:///app.db
 ```
-portfolio/
-├─ run.py                          # entrypoint
-└─ additional_projects/workout_tracker/
-   ├─ requirements.txt
-   └─ src/workout_tracker/
-      ├─ __init__.py               # Flask app factory
-      ├─ db.py                     # SQLAlchemy setup
-      ├─ models.py                 # User + Workout models
-      ├─ auth.py                   # login/register/logout
-      ├─ routes.py                 # dashboard, API endpoints
-      ├─ templates/
-      │   ├─ base.html             # dark theme, nav, bg emojis
-      │   ├─ login.html
-      │   ├─ register.html
-      │   ├─ dashboard.html        # number + slider inputs
-      │   └─ tracker.html
-      └─ static/
-          └─ app.js                # form submit + API + slider sync
-```
-
----
-
-## 📥 Data Model
-### `User`
-- `id` (int, PK)
-- `email`
-- `password_hash`
-- `display_name`
-- `created_at`
-
-### `Workout`
-- `id` (int, PK)
-- `user_id` (FK → User)
-- `date`
-- `exercise`
-- `sets`
-- `reps`
-- `weight`
-- `notes`
-- `created_at` / `updated_at`
-
----
-
-## 🧰 Troubleshooting
-- **Module not found (`workout_tracker`)**  
-  Make sure you’re running from repo root (`portfolio/`) with:
-  ```bash
-  python run.py
-  ```
-
-- **Database errors**  
-  Delete `app.db` and let the app recreate it:
-  ```bash
-  rm app.db
-  python run.py
-  ```
-
-- **Templates not loading**  
-  Ensure `templates/` is inside `src/workout_tracker/`.
-
----
-
-## 🗺️ Roadmap
-- Progress charts (per-exercise over time)
-- Export/import workouts (CSV/Excel)
-- Exercise categories (Push/Pull/Legs, etc.)
-- Personal record (PR) tracking
-- Dark mode toggle
-
----
-
-## 📄 License
-MIT — free to use, modify, and share.
-

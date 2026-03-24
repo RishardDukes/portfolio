@@ -1,272 +1,52 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Workout Tracker</title>
-  <style>
-    :root {
-      --bg: #2e2e2e;
-      --text: #f5f5f5;
-      --link: #9ecbff;
-      --card: rgba(0, 0, 0, 0.6);
-      --shadow: rgba(0, 0, 0, 0.4);
-      --emoji-opacity: 0.20;
-      --emoji-size: clamp(2.4rem, 2.5vw + 1rem, 4rem);
-      --content-max: 720px;
-    }
-
-    html, body { height: 100%; }
-
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
-      max-width: var(--content-max);
-      margin: 2rem auto;
-      padding: 0 1rem;
-      background-color: var(--bg);
-      color: var(--text);
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    nav a {
-      margin-right: 0.75rem;
-      color: var(--link);
-      text-decoration: none;
-    }
-
-    nav a:hover {
-      text-decoration: underline;
-    }
-
-    .flash {
-      padding: 0.4rem 0;
-      color: #ffaaaa;
-    }
-
-    .content-card {
-      background: var(--card);
-      padding: 1rem 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--shadow);
-      position: relative;
-      z-index: 2;
-    }
-
-    .emoji-bg {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .emoji-bg span {
-      position: absolute;
-      font-size: var(--emoji-size);
-      opacity: var(--emoji-opacity);
-      filter: saturate(0.9) contrast(0.9);
-      user-select: none;
-    }
-
-    .slider-bolt {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 260px;
-      height: 8px;
-      background: linear-gradient(90deg, #ffea00, #ff8c00);
-      border-radius: 4px;
-      outline: none;
-      margin-left: 0.5rem;
-      vertical-align: middle;
-      cursor: pointer;
-      box-shadow: 0 0 6px rgba(255, 234, 0, 0.35);
-    }
-
-    .slider-bolt::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #ffea00;
-      border: 2px solid #ff8c00;
-      box-shadow: 0 0 10px #ffea00, 0 0 16px rgba(255, 140, 0, 0.5);
-      cursor: pointer;
-    }
-
-    .slider-bolt::-moz-range-thumb {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #ffea00;
-      border: 2px solid #ff8c00;
-      box-shadow: 0 0 10px #ffea00, 0 0 16px rgba(255, 140, 0, 0.5);
-      cursor: pointer;
-    }
-
-    .bolt {
-      font-size: 1.2rem;
-      margin-left: 0.3rem;
-      color: #ffea00;
-      text-shadow: 0 0 4px #ff8c00;
-      user-select: none;
-    }
-
-    label {
-      display: inline-flex;
-      gap: 0.5rem;
-      align-items: center;
-    }
-
-    input[type="number"],
-    input[type="text"],
-    input[type="date"],
-    textarea {
-      background: #1f1f1f;
-      color: var(--text);
-      border: 1px solid #444;
-      border-radius: 8px;
-      padding: 0.45rem 0.6rem;
-    }
-
-    button {
-      background: #9ecbff;
-      color: #0b2239;
-      border: none;
-      border-radius: 10px;
-      padding: 0.55rem 0.9rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button:hover {
-      filter: brightness(1.05);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th, td {
-      border: 1px solid #444;
-      padding: 0.45rem 0.5rem;
-    }
-
-    thead th {
-      background: #1f1f1f;
-    }
-
-    .sparkle-wrap {
-      position: relative;
-    }
-
-    .sparkle {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 14px;
-      height: 14px;
-      opacity: 0;
-      transform: scale(0.4) rotate(45deg);
-      background:
-        radial-gradient(circle at 30% 30%, #fff 0 30%, rgba(255,255,255,0) 31% 100%),
-        linear-gradient(#b3f0ff, #aef1d8);
-      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0 50%);
-      pointer-events: none;
-      animation: sparkle-burst 550ms ease-out forwards;
-      filter: drop-shadow(0 0 4px rgba(255,255,255,0.9));
-    }
-
-    @keyframes sparkle-burst {
-      0% { opacity: 0; transform: scale(0.4) rotate(45deg); }
-      40% { opacity: 1; transform: scale(1.25) rotate(45deg); }
-      100% { opacity: 0; transform: scale(1.6) rotate(45deg); }
-    }
-
-    .glistening {
-      animation: glisten 850ms ease-out 1;
-      box-shadow: 0 0 0 rgba(0,0,0,0);
-    }
-
-    @keyframes glisten {
-      0% { box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 0 0 rgba(255,255,255,0); }
-      40% { box-shadow: 0 0 20px rgba(80,200,255,0.45); }
-      100% { box-shadow: 0 0 0 rgba(0,0,0,0); }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hercules Workout Tracker{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
 </head>
 <body>
-  <audio id="bg-music" loop>
-    <source src="{{ url_for('static', filename='sounds/background.mp3') }}" type="audio/mpeg">
-  </audio>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand-block">
+                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('auth.login') }}" class="brand-link" {% if current_user.is_authenticated %}data-spa-nav="true"{% endif %}>
+                    <span class="brand-mark">H</span>
+                    <div>
+                        <div class="brand-name">Hercules</div>
+                        <div class="brand-subtitle">Workout Intelligence Platform</div>
+                    </div>
+                </a>
+            </div>
 
-  <div class="emoji-bg">
-    <span style="top:5%; left:8%;">💪</span>
-    <span style="top:12%; left:72%;">💪</span>
-    <span style="top:22%; left:28%;">💪</span>
-    <span style="top:30%; left:86%;">💪</span>
-    <span style="top:41%; left:12%;">💪</span>
-    <span style="top:52%; left:63%;">💪</span>
-    <span style="top:60%; left:35%;">💪</span>
-    <span style="top:71%; left:78%;">💪</span>
-    <span style="top:82%; left:18%;">💪</span>
-    <span style="top:90%; left:55%;">💪</span>
+            {% if current_user.is_authenticated %}
+            <nav class="topbar-nav">
+                <a href="{{ url_for('main.dashboard') }}" class="nav-link" data-spa-nav="true">Dashboard</a>
+                <a href="{{ url_for('main.tracker') }}" class="nav-link" data-spa-nav="true">Tracker</a>
+                <button class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle background music" data-audio-toggle="true">Music: Off</button>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link-muted">Logout</a>
+            </nav>
+            {% endif %}
+        </header>
 
-    <span style="top:7%; left:48%;">🏋️</span>
-    <span style="top:16%; left:18%;">🏋️</span>
-    <span style="top:27%; left:58%;">🏋️</span>
-    <span style="top:36%; left:42%;">🏋️</span>
-    <span style="top:47%; left:82%;">🏋️</span>
-    <span style="top:55%; left:8%;">🏋️</span>
-    <span style="top:66%; left:50%;">🏋️</span>
-    <span style="top:74%; left:30%;">🏋️</span>
-    <span style="top:86%; left:70%;">🏋️</span>
-    <span style="top:93%; left:88%;">🏋️</span>
-  </div>
+        <main class="page-wrap" id="page-wrap">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div class="flash-stack">
+                {% for category, message in messages %}
+                  <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
 
-  <nav>
-    <a href="{{ url_for('main.home') }}">Home</a>
-    <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    <a href="{{ url_for('main.tracker') }}">Tracker</a>
-    <a href="{{ url_for('auth.login') }}">Login</a>
-    <a href="{{ url_for('auth.register') }}">Register</a>
-    <a href="{{ url_for('auth.logout') }}">Logout</a>
-  </nav>
-
-  <hr />
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, msg in messages %}
-        <div class="flash">{{ msg }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <div class="content-card">
-    {% block content %}{% endblock %}
-  </div>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const bg = document.getElementById("bg-music");
-      if (!bg) return;
-
-      bg.volume = 0.2;
-
-      bg.play().catch(() => {
-        console.log("Autoplay blocked — waiting for first click.");
-      });
-
-      document.addEventListener("click", () => {
-        if (bg.paused) {
-          bg.play().catch(() => {});
-        }
-      }, { once: true });
-    });
-  </script>
-
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 </body>
 </html>

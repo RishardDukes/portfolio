@@ -48,16 +48,13 @@ def list_workouts():
 @login_required
 def create_workout():
     data = request.get_json(force=True) or {}
-
     raw_date = data.get("date")
     parsed_date = None
-
     if raw_date:
         try:
             parsed_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
             return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
-
     w = Workout(
         user_id=current_user.id,
         date=parsed_date,
@@ -80,5 +77,3 @@ def delete_workout(wid):
     db.session.delete(w)
     db.session.commit()
     return jsonify({"ok": True})
-
-main = main_bp

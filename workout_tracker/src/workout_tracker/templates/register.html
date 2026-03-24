@@ -1,12 +1,31 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}Register | Hercules{% endblock %}
 {% block content %}
-<h2>Create your account</h2>
-<form method="POST">
-  <p><input name="email" placeholder="Email" /></p>
-  <p><input name="display_name" placeholder="Display Name (optional)" /></p>
-  <p><input type="password" name="password" placeholder="Password (min 8 chars)" /></p>
-  <p><input type="password" name="confirm" placeholder="Confirm password" /></p>
-  <p><button type="submit">Create account</button></p>
-</form>
-<p>Already have an account? <a href="{{ url_for('auth.login') }}">Log in</a>.</p>
+<section class="auth-layout">
+    <div class="auth-copy">
+        <p class="eyebrow">Create your account</p>
+        <h1>Build a stronger training record.</h1>
+        <p>Create an account to start logging workouts, monitoring volume, and keeping progress data in one polished dashboard.</p>
+    </div>
+
+    <div class="auth-card panel">
+        <h2>Register</h2>
+        <form method="post" class="auth-form">
+            <label for="display_name">Display Name</label>
+            <input type="text" name="display_name" id="display_name" placeholder="Your name" required>
+
+            <label for="email">Email</label>
+            <input type="email" name="email" id="email" placeholder="you@example.com" required>
+
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" placeholder="Create a password" required>
+
+            <label for="confirm">Confirm Password</label>
+            <input type="password" name="confirm" id="confirm" placeholder="Confirm your password" required>
+
+            <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+        </form>
+        <p class="auth-switch">Already have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+    </div>
+</section>
 {% endblock %}

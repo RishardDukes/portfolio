@@ -1,1 +1,1 @@
-# Hercules AI Coaching Engine package
+# Hercules AI module init

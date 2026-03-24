@@ -1,19 +1,382 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}Tracker | Hercules{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
 {% block content %}
-<h2>Tracker</h2>
+<section class="tracker-header panel">
+  <div>
+    <p class="eyebrow">Workout tracker</p>
+    <h1>Log sessions with a cleaner workflow.</h1>
+    <p class="hero-copy">Track training volume, personal records, and session notes in a dashboard that looks and behaves more like a modern web app.</p>
+  </div>
+  <div class="tracker-header-actions">
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Back to Dashboard</a>
+  </div>
+</section>
 
-<!-- Quick add form -->
-<form id="add-form" style="display:grid; gap:.6rem; margin-bottom:1rem;">
-  <label>Workout <input id="workout-name" type="text" placeholder="Bench Press"></label>
-  <label>Sets <input id="workout-sets" type="number" min="1" value="3"></label>
-  <label>Reps <input id="workout-reps" type="number" min="1" value="10"></label>
-  <button id="add-btn" type="button">Add</button>
-</form>
+<section class="tracker-summary-grid">
+  <article class="summary-card panel">
+    <p class="summary-label">Total Volume</p>
+    <h3 id="total-volume">0</h3>
+    <span class="summary-meta">Cumulative load moved</span>
+  </article>
+  <article class="summary-card panel">
+    <p class="summary-label">Best PR</p>
+    <h3 id="best-pr">0</h3>
+    <span class="summary-meta">Heaviest logged weight</span>
+  </article>
+  <article class="summary-card panel">
+    <p class="summary-label">7-Day Change</p>
+    <h3 id="vol-prog">0</h3>
+    <span class="summary-meta">Volume progression trend</span>
+  </article>
+  <article class="summary-card panel">
+    <p class="summary-label">Logged Sessions</p>
+    <h3 id="session-count">0</h3>
+    <span class="summary-meta">Completed entries in history</span>
+  </article>
+</section>
 
-<h3>Recent</h3>
-<ul id="workout-list" style="list-style:none; padding-left:0; display:grid; gap:.5rem;"></ul>
+<section class="tracker-main-grid">
+  <div class="panel form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">New entry</p>
+        <h2>Log a workout</h2>
+      </div>
+      <div class="coach-pill">Hercules AI enabled</div>
+    </div>
 
-<p style="opacity:.8; margin-top:1rem;">
-  This page will become your analytics/charts later.
-</p>
+    <form id="workout-form" class="workout-form-grid">
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input type="date" name="date" id="date">
+      </div>
+      <div class="form-group">
+        <label for="daytype">Split</label>
+        <select name="daytype" id="daytype" required>
+          <option value="Push">Push</option>
+          <option value="Pull">Pull</option>
+          <option value="Legs">Legs</option>
+        </select>
+      </div>
+      <div class="form-group form-group-wide">
+        <label for="exercise">Exercise</label>
+        <select name="exercise" id="exercise" required></select>
+      </div>
+      <div class="form-group compact-check">
+        <label for="unilateral">Unilateral</label>
+        <input type="checkbox" name="unilateral" id="unilateral">
+      </div>
+      <div class="form-group" id="side-group" hidden>
+        <label for="side">Side</label>
+        <select name="side" id="side">
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sets">Sets</label>
+        <input type="number" name="sets" id="sets" min="1" required>
+      </div>
+      <div class="form-group">
+        <label for="reps">Reps</label>
+        <input type="number" name="reps" id="reps" min="1" required>
+      </div>
+      <div class="form-group">
+        <label for="weight">Weight</label>
+        <input type="number" name="weight" id="weight" min="0" step="0.1" placeholder="lbs" required>
+      </div>
+      <div class="form-group form-group-full">
+        <label for="notes">Notes</label>
+        <textarea name="notes" id="notes" rows="5" placeholder="How did the session feel? Any cues, fatigue notes, or progression details?"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Add Workout</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="panel list-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">History</p>
+        <h2>Recent workouts</h2>
+      </div>
+      <div class="subdued-text">Newest first</div>
+    </div>
+    <div id="workout-list" class="workout-list"></div>
+  </div>
+</section>
+
+<section class="analytics-grid">
+  <div class="panel analytics-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">Volume trend</p>
+        <h2>Last 7 logged days</h2>
+      </div>
+      <div class="subdued-text">Daily volume</div>
+    </div>
+    <canvas id="analytics-chart" height="120"></canvas>
+  </div>
+
+  <div class="panel analytics-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">Top movements</p>
+        <h2>Most frequent exercises</h2>
+      </div>
+      <div class="subdued-text">By log count</div>
+    </div>
+    <canvas id="exercise-chart" height="120"></canvas>
+  </div>
+</section>
+
+<script>
+const pushList = ["Bench Press", "Overhead Press", "Triceps Extension", "Incline Dumbbell Press", "Dips"];
+const pullList = ["Pull Up", "Barbell Row", "Bicep Curl", "Face Pull", "Lat Pulldown"];
+const legsList = ["Squat", "Deadlift", "Lunge", "Leg Press", "Calf Raise"];
+
+const daytype = document.getElementById('daytype');
+const exercise = document.getElementById('exercise');
+const unilateral = document.getElementById('unilateral');
+const sideGroup = document.getElementById('side-group');
+const form = document.getElementById('workout-form');
+const list = document.getElementById('workout-list');
+const dateInput = document.getElementById('date');
+
+const today = new Date().toISOString().split('T')[0];
+dateInput.value = today;
+
+function updateExercises() {
+    let opts = [];
+    if (daytype.value === 'Push') opts = pushList;
+    if (daytype.value === 'Pull') opts = pullList;
+    if (daytype.value === 'Legs') opts = legsList;
+    exercise.innerHTML = opts.map(x => `<option value="${x}">${x}</option>`).join('');
+}
+
+function toggleSideSelector() {
+    sideGroup.hidden = !unilateral.checked;
+}
+
+daytype.addEventListener('change', updateExercises);
+unilateral.addEventListener('change', toggleSideSelector);
+updateExercises();
+toggleSideSelector();
+
+let volumeChart;
+let exerciseChart;
+
+function formatDate(dateString) {
+  const parsed = new Date(dateString + 'T00:00:00');
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function fetchWorkouts() {
+    fetch('/api/workouts')
+      .then(r => r.json())
+      .then(data => {
+          list.innerHTML = '';
+          if (!data.length) {
+              list.innerHTML = '<div class="empty-state"><h3>No workouts logged yet</h3><p>Your entries will appear here once you add your first session.</p></div>';
+              updateAnalytics([]);
+              return;
+          }
+
+          data.forEach(w => {
+              const volume = (w.sets || 0) * (w.reps || 0) * (w.weight || 0);
+              const div = document.createElement('article');
+              div.className = 'workout-card';
+              div.innerHTML = `
+                <div class="workout-card-top">
+                  <div>
+                    <div class="workout-ex">${w.exercise}</div>
+                    <div class="workout-date">${formatDate(w.date)}</div>
+                  </div>
+                  <button class="icon-btn" type="button" onclick="deleteWorkout(${w.id})" aria-label="Delete workout">Delete</button>
+                </div>
+                <div class="workout-metrics">
+                  <span>${w.sets} sets</span>
+                  <span>${w.reps} reps</span>
+                  <span>${w.weight} lbs</span>
+                  <span>${volume.toLocaleString()} vol</span>
+                </div>
+                <div class="workout-notes">${w.notes ? w.notes : 'No notes added for this session.'}</div>
+              `;
+              list.appendChild(div);
+          });
+          updateAnalytics(data);
+      });
+}
+
+function deleteWorkout(id) {
+    fetch(`/api/workouts/${id}`, { method: 'DELETE' }).then(r => {
+        if (r.ok) fetchWorkouts();
+    });
+}
+
+form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form));
+    if (!unilateral.checked) {
+      delete data.side;
+    }
+    fetch('/api/workouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(r => {
+        if (r.ok) {
+            const keepDate = dateInput.value;
+            form.reset();
+            dateInput.value = keepDate || today;
+            updateExercises();
+            toggleSideSelector();
+            fetchWorkouts();
+        }
+    });
+});
+
+function buildVolumeChart(labels, values) {
+  const ctx = document.getElementById('analytics-chart').getContext('2d');
+  if (volumeChart) volumeChart.destroy();
+  volumeChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Volume',
+        data: values,
+        borderColor: '#4f8cff',
+        backgroundColor: 'rgba(79, 140, 255, 0.12)',
+        borderWidth: 2,
+        tension: 0.35,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94a3b8' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#94a3b8' },
+          grid: { color: 'rgba(148, 163, 184, 0.14)' }
+        }
+      }
+    }
+  });
+}
+
+function buildExerciseChart(labels, values) {
+  const ctx = document.getElementById('exercise-chart').getContext('2d');
+  if (exerciseChart) exerciseChart.destroy();
+  exerciseChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Logs',
+        data: values,
+        backgroundColor: 'rgba(46, 204, 113, 0.75)',
+        borderRadius: 8,
+        maxBarThickness: 44
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#94a3b8' },
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0,
+            color: '#94a3b8'
+          },
+          grid: { color: 'rgba(148, 163, 184, 0.14)' }
+        }
+      }
+    }
+  });
+}
+
+function updateAnalytics(data) {
+  let totalVol = 0;
+  let bestPR = 0;
+  const byDate = {};
+  const exerciseCounts = {};
+
+  data.forEach(w => {
+    const vol = (w.sets || 0) * (w.reps || 0) * (w.weight || 0);
+    totalVol += vol;
+    if ((w.weight || 0) > bestPR) bestPR = w.weight;
+    byDate[w.date] = (byDate[w.date] || 0) + vol;
+    exerciseCounts[w.exercise] = (exerciseCounts[w.exercise] || 0) + 1;
+  });
+
+  document.getElementById('total-volume').textContent = totalVol.toLocaleString();
+  document.getElementById('best-pr').textContent = bestPR ? `${bestPR} lbs` : '0 lbs';
+  document.getElementById('session-count').textContent = data.length.toLocaleString();
+
+  const dates = Object.keys(byDate).sort();
+  const last7 = dates.slice(-7);
+  const last7Vol = last7.map(d => byDate[d]);
+  let prog = '0';
+  if (last7Vol.length > 1) {
+    const diff = last7Vol[last7Vol.length - 1] - last7Vol[0];
+    prog = `${diff >= 0 ? '+' : ''}${diff.toLocaleString()}`;
+  }
+  document.getElementById('vol-prog').textContent = prog;
+
+  buildVolumeChart(last7.map(formatDate), last7Vol);
+
+  const topExercises = Object.entries(exerciseCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  buildExerciseChart(
+    topExercises.map(item => item[0]),
+    topExercises.map(item => item[1])
+  );
+}
+
+const herculesTips = [
+  'Progress faster by keeping the last set quality as high as the first.',
+  'When recovery feels off, reduce fatigue before adding more weight.',
+  'Your notes are valuable. Log what felt strong and what felt off.',
+  'A stable routine makes trend charts far more useful over time.',
+  'Technique consistency is one of the easiest ways to improve performance.'
+];
+let tipTimeout;
+form.addEventListener('input', function() {
+  clearTimeout(tipTimeout);
+  tipTimeout = setTimeout(() => {
+    const tip = herculesTips[Math.floor(Math.random() * herculesTips.length)];
+    if (window.parent && window.parent !== window && window.parent.herculesShowTip) {
+      window.parent.herculesShowTip(tip);
+    }
+  }, 450);
+});
+
+fetchWorkouts();
+</script>
 {% endblock %}

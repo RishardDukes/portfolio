@@ -1,77 +1,58 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% block title %}Dashboard | Hercules{% endblock %}
 {% block content %}
-<h2>Dashboard</h2>
-
-<section>
-  <h3>Log Workout</h3>
-  <form id="log-form">
-    <p>
-      <label>Exercise
-        <input type="text" name="exercise" id="exercise" placeholder="e.g., Bench Press" required>
-      </label>
-    </p>
-
-    <!-- Sets: number + lightning slider -->
-    <p>
-      <label>Sets
-        <input type="number" name="sets" id="sets_num" min="0" max="10" value="3">
-      </label>
-      <input type="range" id="sets_range" class="slider-bolt" min="0" max="10" value="3">
-      <span class="bolt">⚡</span>
-      <span id="sets_value" aria-hidden="true">3</span>
-    </p>
-
-    <!-- Reps: number + lightning slider -->
-    <p>
-      <label>Reps
-        <input type="number" name="reps" id="reps_num" min="0" max="30" value="8">
-      </label>
-      <input type="range" id="reps_range" class="slider-bolt" min="0" max="30" value="8">
-      <span class="bolt">⚡</span>
-      <span id="reps_value" aria-hidden="true">8</span>
-    </p>
-
-    <!-- Weight: number (step=1) + lightning slider -->
-    <p>
-      <label>Weight (lbs)
-        <input type="number" name="weight" id="weight_num" min="0" max="500" step="1" value="135">
-      </label>
-      <input type="range" id="weight_range" class="slider-bolt" min="0" max="500" step="1" value="135">
-      <span class="bolt">⚡</span>
-      <span id="weight_value" aria-hidden="true">135</span>
-    </p>
-
-    <p>
-      <label>Date
-        <input type="date" name="date" id="date" value="{{ now().date() if now else '' }}">
-      </label>
-    </p>
-
-    <p>
-      <label>Notes
-        <input name="notes" id="notes" placeholder="optional notes">
-      </label>
-    </p>
-
-    <button type="submit">Add</button>
-  </form>
+<section class="dashboard-hero panel">
+    <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Welcome back, {{ current_user.display_name or current_user.email }}.</h1>
+        <p class="hero-copy">Log sessions, monitor progress, and keep your training data organized in a cleaner, more professional workspace.</p>
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="{{ url_for('main.tracker') }}" data-spa-nav="true">Open Tracker</a>
+            <a class="btn btn-secondary" href="{{ url_for('auth.logout') }}">Sign Out</a>
+        </div>
+    </div>
+    <div class="hero-side-card">
+        <div class="metric-kicker">Hercules Coach</div>
+        <div id="hercules-ai" class="coach-quote">Ready when you are. Need a training cue or consistency reminder?</div>
+        <button class="btn btn-primary btn-block" onclick="herculesTalk()">Get Coaching Tip</button>
+    </div>
 </section>
 
-<hr/>
-
-<section>
-  <h3>Your recent workouts</h3>
-  <div id="status"></div>
-  <table id="workouts-table" cellpadding="6" cellspacing="0">
-    <thead>
-      <tr>
-        <th>Date</th><th>Exercise</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<section class="dashboard-grid">
+    <article class="info-card panel">
+        <p class="card-label">Training Hub</p>
+        <h3>Track every session</h3>
+        <p>Capture sets, reps, weight, and notes in one place so your workout history stays structured and easy to review.</p>
+    </article>
+    <article class="info-card panel">
+        <p class="card-label">Analytics</p>
+        <h3>Watch the numbers move</h3>
+        <p>See total volume, best lifts, and weekly trends without digging through cluttered forms or raw records.</p>
+    </article>
+    <article class="info-card panel">
+        <p class="card-label">Coaching Layer</p>
+        <h3>Use prompts that help</h3>
+        <p>Hercules AI gives lightweight guidance designed to feel useful instead of noisy.</p>
+    </article>
 </section>
 
-<audio id="success-sound" preload="auto" src="{{ url_for('static', filename='success.mp3') }}"></audio>
-<script src="{{ url_for('static', filename='app.js') }}"></script>
+<script>
+function herculesShowTip(tip) {
+  document.getElementById('hercules-ai').textContent = tip;
+}
+window.herculesShowTip = herculesShowTip;
+function herculesTalk() {
+  const tips = [
+    "Prioritize clean reps before increasing the load.",
+    "A consistent training week beats one perfect workout.",
+    "Record short notes after each lift so future sessions are easier to adjust.",
+    "When progress stalls, improve recovery before adding more volume.",
+    "Strength trends are easier to spot when every session is logged.",
+    "Move with intent on every rep, especially your first warm-up sets."
+  ];
+  const msg = tips[Math.floor(Math.random() * tips.length)];
+  herculesShowTip(msg);
+}
+window.herculesTalk = herculesTalk;
+</script>
 {% endblock %}

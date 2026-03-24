@@ -1,86 +1,262 @@
-// Handles: play success.mp3 -> after it ends, POST -> render with sparkle
-const addBtn = document.getElementById('add-btn');
-const audioEl = document.getElementById('confirm-audio');
+document.addEventListener('DOMContentLoaded', () => {
+  const selectors = {
+    interactive: 'button, .btn, input[type="submit"], input[type="button"], [role="button"], .nav-link',
+    spaLink: 'a[data-spa-nav="true"]'
+  };
 
-function playConfirmSoundToEnd() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (audioEl.readyState < 2) audioEl.load();
-      audioEl.currentTime = 0;
-      const onEnded = () => { audioEl.removeEventListener('ended', onEnded); resolve(); };
-      audioEl.addEventListener('ended', onEnded, { once: true });
-      const p = audioEl.play();
-      if (p && typeof p.then === 'function') await p;
-    } catch (e) { reject(e); }
-  });
-}
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  const audioContext = AudioContextCtor ? new AudioContextCtor() : null;
 
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
+  const appAudio = window.__wipAudio || {
+    started: false,
+    bgMusic: null,
+    isMuted: localStorage.getItem('wipMusicMuted') === 'true'
+  };
+  window.__wipAudio = appAudio;
 
-function renderNewWorkoutWithSparkle(workout) {
-  const list = document.getElementById('workout-list');
-  const li = document.createElement('li');
-  li.className = 'sparkle-wrap glistening';
-  li.innerHTML = `
-    <div class="workout-card">
-      <strong>${escapeHtml(workout.name)}</strong>
-      <div>${workout.sets} × ${workout.reps}</div>
-    </div>
-  `;
-  const sparkle = document.createElement('div');
-  sparkle.className = 'sparkle';
-  li.appendChild(sparkle);
-  list?.prepend(li);
-  setTimeout(() => li.classList.remove('glistening'), 900);
-}
-
-async function createWorkout(payload) {
-  const res = await fetch('/api/workouts', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    credentials: 'include'
-  });
-  if (!res.ok) {
-    const msg = await res.text().catch(() => res.statusText);
-    throw new Error(`Create failed: ${res.status} ${msg}`);
-  }
-  return res.json();
-}
-
-function getWorkoutFormData() {
-  const name = (document.getElementById('workout-name')?.value ?? '').trim();
-  const reps = Number(document.getElementById('workout-reps')?.value ?? 0);
-  const sets = Number(document.getElementById('workout-sets')?.value ?? 0);
-  return { name, reps, sets };
-}
-
-addBtn?.addEventListener('click', async () => {
-  try {
-    await playConfirmSoundToEnd(); // 1) play sound fully
-    const payload = getWorkoutFormData();
-    if (!payload.name) { alert('Please enter a workout name.'); return; }
-    const created = await createWorkout(payload); // 2) now add
-    renderNewWorkoutWithSparkle(created);         // 3) sparkle ✨
-    // clear form
-    document.getElementById('workout-name')?.value = '';
-    document.getElementById('workout-reps')?.value = '';
-    document.getElementById('workout-sets')?.value = '';
-  } catch (err) {
-    console.warn('Sound failed or add failed:', err);
-    if (confirm("Sound couldn't play (muted/autoplay blocked). Add workout anyway?")) {
-      const payload = getWorkoutFormData();
-      if (!payload.name) { alert('Please enter a workout name.'); return; }
-      createWorkout(payload)
-        .then(renderNewWorkoutWithSparkle)
-        .catch(e => alert(e.message || 'Failed to add workout.'));
+  const updateToggleLabel = () => {
+    const toggle = document.querySelector('[data-audio-toggle="true"]');
+    if (!toggle) {
+      return;
     }
+    toggle.textContent = appAudio.isMuted ? 'Music: Off' : 'Music: On';
+    toggle.setAttribute('aria-pressed', String(!appAudio.isMuted));
+  };
+
+  const startMusicIfNeeded = () => {
+    if (appAudio.started || appAudio.isMuted) {
+      return;
+    }
+
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+
+    appAudio.bgMusic = appAudio.bgMusic || new Audio('/static/sounds/Wii.mp3');
+    appAudio.bgMusic.loop = true;
+    appAudio.bgMusic.volume = 0.1;
+
+    appAudio.bgMusic.play().then(() => {
+      appAudio.started = true;
+    }).catch(() => {
+      appAudio.started = false;
+    });
+  };
+
+  const stopMusic = () => {
+    if (!appAudio.bgMusic) {
+      return;
+    }
+
+    appAudio.bgMusic.pause();
+    appAudio.started = false;
+  };
+
+  const toggleMusic = () => {
+    appAudio.isMuted = !appAudio.isMuted;
+    localStorage.setItem('wipMusicMuted', String(appAudio.isMuted));
+
+    if (appAudio.isMuted) {
+      stopMusic();
+    } else {
+      startMusicIfNeeded();
+    }
+    updateToggleLabel();
+  };
+
+  const playFuturisticClick = () => {
+    if (!audioContext) {
+      return;
+    }
+
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+
+    const now = audioContext.currentTime;
+    const masterGain = audioContext.createGain();
+    masterGain.gain.setValueAtTime(0.0001, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.05, now + 0.012);
+    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    masterGain.connect(audioContext.destination);
+
+    const oscA = audioContext.createOscillator();
+    oscA.type = 'triangle';
+    oscA.frequency.setValueAtTime(820, now);
+    oscA.frequency.exponentialRampToValueAtTime(1320, now + 0.055);
+    oscA.connect(masterGain);
+
+    const oscB = audioContext.createOscillator();
+    oscB.type = 'sine';
+    oscB.frequency.setValueAtTime(1640, now);
+    oscB.frequency.exponentialRampToValueAtTime(920, now + 0.07);
+    oscB.connect(masterGain);
+
+    oscA.start(now);
+    oscB.start(now);
+    oscA.stop(now + 0.16);
+    oscB.stop(now + 0.1);
+  };
+
+  const executeInlineScripts = container => {
+    container.querySelectorAll('script').forEach(oldScript => {
+      const replacement = document.createElement('script');
+      Array.from(oldScript.attributes).forEach(attr => replacement.setAttribute(attr.name, attr.value));
+      if (oldScript.src) {
+        replacement.textContent = oldScript.textContent;
+      } else {
+        replacement.textContent = `(function () {\n${oldScript.textContent}\n})();`;
+      }
+      oldScript.replaceWith(replacement);
+    });
+  };
+
+  const loadHeadScripts = async doc => {
+    const scripts = Array.from(doc.querySelectorAll('head script[src]')).map(script => script.getAttribute('src')).filter(Boolean);
+    for (const src of scripts) {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        continue;
+      }
+
+      await new Promise(resolve => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => resolve();
+        document.head.appendChild(script);
+      });
+    }
+  };
+
+  const shouldHandleSpa = (link, event) => {
+    if (!link || !link.matches(selectors.spaLink)) {
+      return false;
+    }
+
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return false;
+    }
+
+    if (link.target && link.target !== '_self') {
+      return false;
+    }
+
+    const url = new URL(link.href, window.location.origin);
+    if (url.origin !== window.location.origin) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const swapPage = async (url, pushHistory) => {
+    const response = await fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+      window.location.href = url;
+      return;
+    }
+
+    const html = await response.text();
+    const parser = new DOMParser();
+    const nextDoc = parser.parseFromString(html, 'text/html');
+    const incomingMain = nextDoc.querySelector('#page-wrap');
+    const currentMain = document.querySelector('#page-wrap');
+
+    if (!incomingMain || !currentMain) {
+      window.location.href = url;
+      return;
+    }
+
+    await loadHeadScripts(nextDoc);
+
+    currentMain.innerHTML = incomingMain.innerHTML;
+    document.title = nextDoc.title || document.title;
+
+    if (pushHistory) {
+      window.history.pushState({ spa: true }, '', url);
+    }
+
+    executeInlineScripts(currentMain);
+    updateToggleLabel();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  document.addEventListener('click', event => {
+    const link = event.target instanceof Element ? event.target.closest('a') : null;
+    if (!shouldHandleSpa(link, event)) {
+      return;
+    }
+
+    event.preventDefault();
+    swapPage(link.href, true).catch(() => {
+      window.location.href = link.href;
+    });
+  });
+
+  window.addEventListener('popstate', () => {
+    swapPage(window.location.href, false).catch(() => {
+      window.location.reload();
+    });
+  });
+
+  document.addEventListener('pointerdown', event => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const audioToggle = event.target.closest('[data-audio-toggle="true"]');
+    if (audioToggle) {
+      playFuturisticClick();
+      toggleMusic();
+      return;
+    }
+
+    const control = event.target.closest(selectors.interactive);
+    if (control && !control.matches(':disabled, [aria-disabled="true"]')) {
+      playFuturisticClick();
+      startMusicIfNeeded();
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    const isActivateKey = event.key === 'Enter' || event.key === ' ';
+    if (!isActivateKey || !(event.target instanceof Element)) {
+      return;
+    }
+
+    const control = event.target.closest(selectors.interactive);
+    if (control && !control.matches(':disabled, [aria-disabled="true"]')) {
+      playFuturisticClick();
+      startMusicIfNeeded();
+    }
+  });
+
+  document.querySelectorAll('a[href="#"]').forEach(link => {
+    link.addEventListener('click', event => event.preventDefault());
+  });
+
+  updateToggleLabel();
+
+  const hasMusicToggle = Boolean(document.querySelector('[data-audio-toggle="true"]'));
+  if (hasMusicToggle && !appAudio.isMuted) {
+    startMusicIfNeeded();
   }
+
+  window.addEventListener('focus', () => {
+    if (hasMusicToggle && !appAudio.isMuted) {
+      startMusicIfNeeded();
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && hasMusicToggle && !appAudio.isMuted) {
+      startMusicIfNeeded();
+    }
+  });
 });
