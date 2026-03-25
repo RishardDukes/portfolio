@@ -81,26 +81,21 @@ Python, Flask, OpenAI API, PyPDF2, Pytesseract, HTML/CSS/JS
 ## 🏋️ Workout Tracker + Hercules AI
 
 **What is it?**  
-A full-stack workout tracking system enhanced with **Hercules AI**, a built-in coaching engine that provides real-time recommendations after each logged set.
+A full-stack workout tracking system enhanced with **Hercules AI**, a coaching layer designed to make training logs more useful, more organized, and more actionable over time.
 
 **Key Features:**
 - User authentication (login/register)  
 - Workout logging + persistent database (SQLite)  
-- Live dashboard with stats + history  
-- Sound + interactive UI feedback  
-- AI-driven coaching system  
+- Reusable training programs with custom days and exercises  
+- Live dashboard with progress stats and session history  
+- Music picker + interactive UI sound feedback  
+- AI coaching with science-backed guidance  
 
 **Hercules AI:**
-- Analyzes performance inputs (reps, weight)  
-- Determines optimal next action:
-  - Increase weight  
-  - Decrease weight  
-  - Maintain weight  
-
-- Returns:
-  - Next weight target  
-  - Rep goal  
-  - Coaching message  
+- Analyzes workout history, split balance, and consistency trends  
+- Pulls from PubMed Central research for more grounded coaching context  
+- Surfaces coaching tips, reasoning, and research links directly in the dashboard  
+- Supports flexible workout planning without forcing a rigid schedule  
 
 **Tech:**  
 Python, Flask, SQLite, JavaScript, HTML/CSS
