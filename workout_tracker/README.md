@@ -8,9 +8,23 @@ A workout tracking web app built with Flask, SQLAlchemy, and vanilla JS. It brin
 
 ## Preview
 
-![Workout Tracker preview](docs/preview.svg)
+### Dashboard
 
-This preview highlights the four main product surfaces: the dashboard, tracker, program builder, and Hercules AI coaching layer.
+![Workout Tracker dashboard preview](docs/dashboard-preview.png)
+
+Dashboard view showing the top navigation, hero section, coaching panel, and summary cards.
+
+### Tracker
+
+![Workout Tracker tracker preview](docs/tracker-preview.png)
+
+Tracker view showing session metrics, quick-start plan loading, workout entry, and session history.
+
+### Programs
+
+![Workout Tracker programs preview](docs/programs-preview.png)
+
+Programs view showing the program builder, create flow, and saved training-day structure.
 
 ## Features
 
