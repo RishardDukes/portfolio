@@ -28,6 +28,17 @@
             <nav class="topbar-nav">
                 <a href="{{ url_for('main.dashboard') }}" class="nav-link" data-spa-nav="true">Dashboard</a>
                 <a href="{{ url_for('main.tracker') }}" class="nav-link" data-spa-nav="true">Tracker</a>
+                <a href="{{ url_for('main.programs') }}" class="nav-link" data-spa-nav="true">Programs</a>
+                <label class="music-picker-label" for="music-track-picker">Track</label>
+                <select id="music-track-picker" class="music-picker" aria-label="Choose background music track" data-music-picker="true">
+                                        {% if topbar_tracks %}
+                                            {% for track in topbar_tracks %}
+                                                <option value="{{ track }}">{{ track.rsplit('.', 1)[0] }}</option>
+                                            {% endfor %}
+                                        {% else %}
+                                            <option value="">No tracks found</option>
+                                        {% endif %}
+                </select>
                 <button class="audio-toggle" type="button" aria-pressed="false" aria-label="Toggle background music" data-audio-toggle="true">Music: Off</button>
                 <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link-muted">Logout</a>
             </nav>

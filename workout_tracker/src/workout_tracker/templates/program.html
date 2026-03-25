@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% block title %}Programs | Hercules{% endblock %}
+{% block content %}
+
+<section class="tracker-header panel">
+  <div>
+    <p class="eyebrow">Training Programs</p>
+    <h1>Build your regime.</h1>
+    <p class="hero-copy">Define your training days and exercises ahead of time. Load any day into the tracker to pre-fill the form — or skip it and log freely whenever you want.</p>
+  </div>
+  <div class="tracker-header-actions">
+    <a href="{{ url_for('main.tracker') }}" class="btn btn-primary" data-spa-nav="true">Open Tracker</a>
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Dashboard</a>
+  </div>
+</section>
+
+<div class="panel program-create-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="card-label">Create</p>
+      <h2>New program</h2>
+    </div>
+  </div>
+  <div class="add-program-form">
+    <input type="text" id="new-program-name" class="prog-input" placeholder="e.g. Push Pull Legs, 5/3/1, Upper Lower">
+    <button class="btn btn-primary" type="button" onclick="createProgram()">Add Program</button>
+  </div>
+</div>
+
+<div id="programs-list" class="programs-list"></div>
+
+<script>
+let programsData = [];
+
+async function fetchPrograms() {
+  try {
+    const res = await fetch('/api/programs');
+    if (!res.ok) return;
+    programsData = await res.json();
+    renderPrograms();
+  } catch (e) {
+    console.error('Failed to load programs', e);
+  }
+}
+
+function renderPrograms() {
+  const container = document.getElementById('programs-list');
+  if (!programsData.length) {
+    container.innerHTML = `
+      <div class="program-empty panel">
+        <p class="card-label">Nothing here yet</p>
+        <h3>Create your first program above.</h3>
+        <p>Name it after your split — "Push Pull Legs", "Upper Lower", or anything that fits how you train.</p>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = programsData.map(prog => programHTML(prog)).join('');
+}
+
+function programHTML(prog) {
+  const daysHTML = prog.days.length
+    ? prog.days.map(day => dayHTML(prog.id, day)).join('')
+    : `<p class="prog-no-days">No days added yet. Use the field below to add your first training day.</p>`;
+  return `
+    <div class="panel program-entry" id="prog-${prog.id}">
+      <div class="panel-heading">
+        <div>
+          <p class="card-label">Program</p>
+          <h2>${escHtml(prog.name)}</h2>
+        </div>
+        <button class="btn btn-ghost-danger" type="button" onclick="deleteProgram(${prog.id})">Delete program</button>
+      </div>
+      <div class="program-days" id="days-${prog.id}">
+        ${daysHTML}
+      </div>
+      <div class="add-day-form">
+        <input type="text" id="day-label-${prog.id}" class="prog-input" placeholder="Day label — e.g. Push A, Upper Heavy, Full Body">
+        <button class="btn btn-secondary" type="button" onclick="addDay(${prog.id})">Add Day</button>
+      </div>
+    </div>
+  `;
+}
+
+function dayHTML(progId, day) {
+  const exHTML = day.exercises.length
+    ? day.exercises.map(ex => exerciseRowHTML(ex)).join('')
+    : `<p class="day-no-exercises">No exercises yet — add one below.</p>`;
+  return `
+    <div class="program-day-card" id="day-${day.id}">
+      <div class="day-header">
+        <span class="day-label-text">${escHtml(day.label)}</span>
+        <button class="icon-btn" type="button" onclick="deleteDay(${day.id})">Remove</button>
+      </div>
+      <div class="day-exercises-list" id="exlist-${day.id}">
+        ${exHTML}
+      </div>
+      <div class="add-exercise-form">
+        <input type="text" id="ex-name-${day.id}" class="prog-input prog-input-flex" placeholder="Exercise name">
+        <input type="number" id="ex-sets-${day.id}" class="prog-input prog-input-sm" placeholder="Sets" min="1" value="3">
+        <input type="number" id="ex-reps-${day.id}" class="prog-input prog-input-sm" placeholder="Reps" min="1" value="10">
+        <button class="btn btn-secondary" type="button" onclick="addExercise(${day.id})">Add</button>
+      </div>
+    </div>
+  `;
+}
+
+function exerciseRowHTML(ex) {
+  return `
+    <div class="day-exercise-row" id="ex-${ex.id}">
+      <span class="ex-name">${escHtml(ex.exercise_name)}</span>
+      <span class="ex-target">${ex.target_sets} × ${ex.target_reps}</span>
+      <button class="icon-btn" type="button" onclick="deleteExercise(${ex.id})" aria-label="Remove exercise">✕</button>
+    </div>
+  `;
+}
+
+async function createProgram() {
+  const input = document.getElementById('new-program-name');
+  const name = (input.value || '').trim();
+  if (!name) { input.focus(); return; }
+  const res = await fetch('/api/programs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  });
+  if (res.ok) {
+    input.value = '';
+    fetchPrograms();
+  }
+}
+
+async function deleteProgram(pid) {
+  if (!confirm('Delete this program and all its days?')) return;
+  const res = await fetch(`/api/programs/${pid}`, { method: 'DELETE' });
+  if (res.ok) fetchPrograms();
+}
+
+async function addDay(progId) {
+  const input = document.getElementById(`day-label-${progId}`);
+  const label = (input.value || '').trim();
+  if (!label) { input.focus(); return; }
+  const res = await fetch(`/api/programs/${progId}/days`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label }),
+  });
+  if (res.ok) {
+    input.value = '';
+    fetchPrograms();
+  }
+}
+
+async function deleteDay(did) {
+  const res = await fetch(`/api/programs/days/${did}`, { method: 'DELETE' });
+  if (res.ok) fetchPrograms();
+}
+
+async function addExercise(did) {
+  const nameInput = document.getElementById(`ex-name-${did}`);
+  const setsInput = document.getElementById(`ex-sets-${did}`);
+  const repsInput = document.getElementById(`ex-reps-${did}`);
+  const name = (nameInput.value || '').trim();
+  if (!name) { nameInput.focus(); return; }
+  const res = await fetch(`/api/programs/days/${did}/exercises`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      exercise_name: name,
+      target_sets: parseInt(setsInput.value) || 3,
+      target_reps: parseInt(repsInput.value) || 10,
+    }),
+  });
+  if (res.ok) {
+    nameInput.value = '';
+    fetchPrograms();
+  }
+}
+
+async function deleteExercise(eid) {
+  const res = await fetch(`/api/programs/exercises/${eid}`, { method: 'DELETE' });
+  if (res.ok) fetchPrograms();
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Allow Enter key on all program inputs
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  const t = e.target;
+  if (t.id === 'new-program-name') {
+    createProgram();
+  } else if (t.id.startsWith('day-label-')) {
+    const progId = parseInt(t.id.replace('day-label-', ''), 10);
+    addDay(progId);
+  } else if (t.id.startsWith('ex-name-') || t.id.startsWith('ex-sets-') || t.id.startsWith('ex-reps-')) {
+    const parts = t.id.split('-');
+    const did = parseInt(parts[parts.length - 1], 10);
+    addExercise(did);
+  }
+});
+
+fetchPrograms();
+</script>
+{% endblock %}

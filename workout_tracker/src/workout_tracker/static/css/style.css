@@ -121,6 +121,45 @@ a:hover {
   gap: 10px;
 }
 
+.music-picker-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin: 0 2px 0 8px;
+}
+
+.music-picker {
+  width: auto;
+  min-width: 168px;
+  max-width: 220px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(15, 23, 42, 0.72);
+  font-size: 0.86rem;
+}
+
+.music-picker-block {
+  width: 100%;
+  max-width: 100%;
+}
+
+.music-control-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.music-control-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: var(--muted-2);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .audio-toggle {
   appearance: none;
   border: 1px solid rgba(79, 140, 255, 0.34);
@@ -556,6 +595,15 @@ label {
     flex-wrap: wrap;
   }
 
+  .music-picker-label {
+    margin-left: 0;
+  }
+
+  .music-picker {
+    flex: 1 1 220px;
+    max-width: 100%;
+  }
+
   .page-wrap {
     width: min(100% - 20px, 1180px);
     margin-bottom: 28px;
@@ -587,4 +635,227 @@ label {
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+/* ─── Programs Page ─────────────────────────────────────── */
+
+.program-create-panel {
+  max-width: 680px;
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.add-program-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.prog-input {
+  background: rgba(15, 23, 42, 0.82);
+  color: var(--text);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  padding: 12px 15px;
+  font: inherit;
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.prog-input:focus {
+  border-color: rgba(79, 140, 255, 0.78);
+  box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.14);
+}
+
+.prog-input::placeholder {
+  color: #64748b;
+}
+
+.prog-input-flex {
+  flex: 1;
+}
+
+.prog-input-sm {
+  width: 72px;
+}
+
+.programs-list {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.program-empty {
+  padding: 36px;
+  text-align: center;
+  color: var(--muted-2);
+}
+
+.program-empty h3 {
+  margin-bottom: 8px;
+}
+
+.program-entry {
+  padding: 24px;
+}
+
+.program-days {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.prog-no-days {
+  color: var(--muted-2);
+  font-size: 0.9rem;
+  padding: 6px 0;
+}
+
+.program-day-card {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.day-label-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.day-exercises-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.day-no-exercises {
+  color: var(--muted-2);
+  font-size: 0.85rem;
+}
+
+.day-exercise-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(79, 140, 255, 0.06);
+  border-radius: 10px;
+}
+
+.ex-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.ex-target {
+  font-size: 0.84rem;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.add-day-form,
+.add-exercise-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-ghost-danger {
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  font-weight: 600;
+  border-radius: 14px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.16s ease;
+}
+
+.btn-ghost-danger:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+/* ─── Plan Loader on Tracker Page ───────────────────────── */
+
+.plan-loader-panel {
+  padding: 20px 24px;
+  margin-bottom: 18px;
+}
+
+.plan-loader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.plan-loader-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.plan-day-select {
+  min-width: 260px;
+  max-width: 380px;
+  flex: 1;
+}
+
+.plan-exercise-shelf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 38px;
+  align-items: center;
+}
+
+.plan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(79, 140, 255, 0.09);
+  border: 1px solid rgba(79, 140, 255, 0.22);
+  border-radius: 999px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.875rem;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.plan-chip:hover {
+  background: rgba(79, 140, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.plan-chip-name {
+  font-weight: 500;
+}
+
+.plan-chip-meta {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #4f8cff;
+}
+
+.plan-empty-text {
+  color: var(--muted-2);
+  font-size: 0.9rem;
 }

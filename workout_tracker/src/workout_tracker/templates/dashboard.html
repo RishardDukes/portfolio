@@ -8,6 +8,7 @@
         <p class="hero-copy">Log sessions, monitor progress, and keep your training data organized in a cleaner, more professional workspace.</p>
         <div class="hero-actions">
             <a class="btn btn-primary" href="{{ url_for('main.tracker') }}" data-spa-nav="true">Open Tracker</a>
+            <a class="btn btn-secondary" href="{{ url_for('main.programs') }}" data-spa-nav="true">My Programs</a>
             <a class="btn btn-secondary" href="{{ url_for('auth.logout') }}">Sign Out</a>
         </div>
     </div>
@@ -30,28 +31,50 @@
         <p>See total volume, best lifts, and weekly trends without digging through cluttered forms or raw records.</p>
     </article>
     <article class="info-card panel">
-        <p class="card-label">Coaching Layer</p>
-        <h3>Use prompts that help</h3>
-        <p>Hercules AI gives lightweight guidance designed to feel useful instead of noisy.</p>
+        <p class="card-label">Training Programs</p>
+        <h3>Plan your splits</h3>
+        <p>Define days and exercises for each split. Load any day into the tracker to pre-fill the form — or ignore it and log freely.</p>
     </article>
 </section>
 
 <script>
-function herculesShowTip(tip) {
-  document.getElementById('hercules-ai').textContent = tip;
+function herculesShowTip(data) {
+  const display = document.getElementById('hercules-ai');
+  if (typeof data === 'string') {
+    display.textContent = data;
+  } else if (data.tip) {
+    let researchHtml = '';
+    if (data.source) {
+      researchHtml = `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #666;">
+        <strong>Source:</strong> ${data.source}`;
+      if (data.research_url) {
+        researchHtml += `<br><a href="${data.research_url}" target="_blank" style="color: #4f8cff; text-decoration: none;">📖 Read research →</a>`;
+      }
+      researchHtml += `</div>`;
+    }
+    display.innerHTML = `
+      <div style="margin-bottom: 8px; font-weight: 600; color: #4f8cff;">${data.category}</div>
+      <div>${data.tip}</div>
+      ${data.reasoning ? `<div style="margin-top: 8px; font-size: 0.9em; color: #888; font-style: italic;">${data.reasoning}</div>` : ''}
+      ${researchHtml}
+    `;
+  } else {
+    display.textContent = 'Unable to load coaching tip.';
+  }
 }
 window.herculesShowTip = herculesShowTip;
+
 function herculesTalk() {
-  const tips = [
-    "Prioritize clean reps before increasing the load.",
-    "A consistent training week beats one perfect workout.",
-    "Record short notes after each lift so future sessions are easier to adjust.",
-    "When progress stalls, improve recovery before adding more volume.",
-    "Strength trends are easier to spot when every session is logged.",
-    "Move with intent on every rep, especially your first warm-up sets."
-  ];
-  const msg = tips[Math.floor(Math.random() * tips.length)];
-  herculesShowTip(msg);
+  fetch('/api/hercules/coaching-tip')
+    .then(r => {
+      if (!r.ok) throw new Error('Failed to fetch coaching tip');
+      return r.json();
+    })
+    .then(data => herculesShowTip(data))
+    .catch(err => {
+      console.error('Error fetching coaching tip:', err);
+      herculesShowTip('Unable to fetch coaching tip at this time.');
+    });
 }
 window.herculesTalk = herculesTalk;
 </script>

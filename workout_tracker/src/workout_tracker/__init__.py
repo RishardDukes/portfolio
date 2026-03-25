@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from flask import Flask
 from flask_login import LoginManager
 from .db import db
@@ -18,6 +19,21 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
+
+    @app.context_processor
+    def inject_music_tracks():
+        sounds_dir = Path(app.static_folder) / "sounds"
+        allowed_suffixes = {".mp3", ".wav", ".ogg", ".m4a"}
+        tracks = []
+        if sounds_dir.exists() and sounds_dir.is_dir():
+            tracks = [
+                item.name
+                for item in sounds_dir.iterdir()
+                if item.is_file() and item.suffix.lower() in allowed_suffixes
+            ]
+            tracks.sort(key=str.lower)
+        return {"topbar_tracks": tracks}
+
     with app.app_context():
         db.create_all()
     app.register_blueprint(auth_bp)

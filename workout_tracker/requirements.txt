@@ -3,3 +3,4 @@ Flask-Login
 Flask-SQLAlchemy
 Werkzeug
 click
+requests>=2.28

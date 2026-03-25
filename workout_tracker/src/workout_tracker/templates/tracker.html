@@ -7,8 +7,8 @@
 <section class="tracker-header panel">
   <div>
     <p class="eyebrow">Workout tracker</p>
-    <h1>Log sessions with a cleaner workflow.</h1>
-    <p class="hero-copy">Track training volume, personal records, and session notes in a dashboard that looks and behaves more like a modern web app.</p>
+    <h1>Log your training with confidence.</h1>
+    <p class="hero-copy">Record sets, reps, load, and notes in one place so your progress stays clear and easy to review.</p>
   </div>
   <div class="tracker-header-actions">
     <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Back to Dashboard</a>
@@ -19,7 +19,7 @@
   <article class="summary-card panel">
     <p class="summary-label">Total Volume</p>
     <h3 id="total-volume">0</h3>
-    <span class="summary-meta">Cumulative load moved</span>
+    <span class="summary-meta">Total load across all sessions</span>
   </article>
   <article class="summary-card panel">
     <p class="summary-label">Best PR</p>
@@ -29,23 +29,36 @@
   <article class="summary-card panel">
     <p class="summary-label">7-Day Change</p>
     <h3 id="vol-prog">0</h3>
-    <span class="summary-meta">Volume progression trend</span>
+    <span class="summary-meta">Change from first to latest day</span>
   </article>
   <article class="summary-card panel">
     <p class="summary-label">Logged Sessions</p>
     <h3 id="session-count">0</h3>
-    <span class="summary-meta">Completed entries in history</span>
+    <span class="summary-meta">Workouts recorded to date</span>
   </article>
 </section>
+
+<div class="panel plan-loader-panel" id="plan-loader" style="display:none">
+  <div class="plan-loader-header">
+    <div>
+      <p class="card-label">Quick start</p>
+      <h3 class="plan-loader-title">Load from plan</h3>
+    </div>
+    <select id="plan-day-select" class="plan-day-select">
+      <option value="">— choose a training day —</option>
+    </select>
+  </div>
+  <div id="plan-exercise-shelf" class="plan-exercise-shelf"></div>
+</div>
 
 <section class="tracker-main-grid">
   <div class="panel form-panel">
     <div class="panel-heading">
       <div>
-        <p class="card-label">New entry</p>
-        <h2>Log a workout</h2>
+        <p class="card-label">Session entry</p>
+        <h2>Add workout details</h2>
       </div>
-      <div class="coach-pill">Hercules AI enabled</div>
+      <div class="coach-pill">Insights available</div>
     </div>
 
     <form id="workout-form" class="workout-form-grid">
@@ -90,10 +103,10 @@
       </div>
       <div class="form-group form-group-full">
         <label for="notes">Notes</label>
-        <textarea name="notes" id="notes" rows="5" placeholder="How did the session feel? Any cues, fatigue notes, or progression details?"></textarea>
+        <textarea name="notes" id="notes" rows="5" placeholder="Optional: note effort, technique cues, and anything to revisit next session."></textarea>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Add Workout</button>
+        <button class="btn btn-primary" type="submit">Save Workout</button>
       </div>
     </form>
   </div>
@@ -101,8 +114,8 @@
   <div class="panel list-panel">
     <div class="panel-heading">
       <div>
-        <p class="card-label">History</p>
-        <h2>Recent workouts</h2>
+        <p class="card-label">Session history</p>
+        <h2>Recent entries</h2>
       </div>
       <div class="subdued-text">Newest first</div>
     </div>
@@ -115,9 +128,9 @@
     <div class="panel-heading">
       <div>
         <p class="card-label">Volume trend</p>
-        <h2>Last 7 logged days</h2>
+        <h2>Last 7 training days</h2>
       </div>
-      <div class="subdued-text">Daily volume</div>
+      <div class="subdued-text">Load by day</div>
     </div>
     <canvas id="analytics-chart" height="120"></canvas>
   </div>
@@ -125,10 +138,10 @@
   <div class="panel analytics-panel">
     <div class="panel-heading">
       <div>
-        <p class="card-label">Top movements</p>
-        <h2>Most frequent exercises</h2>
+        <p class="card-label">Exercise mix</p>
+        <h2>Most logged exercises</h2>
       </div>
-      <div class="subdued-text">By log count</div>
+      <div class="subdued-text">By entry count</div>
     </div>
     <canvas id="exercise-chart" height="120"></canvas>
   </div>
@@ -181,7 +194,7 @@ function fetchWorkouts() {
       .then(data => {
           list.innerHTML = '';
           if (!data.length) {
-              list.innerHTML = '<div class="empty-state"><h3>No workouts logged yet</h3><p>Your entries will appear here once you add your first session.</p></div>';
+              list.innerHTML = '<div class="empty-state"><h3>No workouts yet</h3><p>Your recent sessions will appear here once you save your first entry.</p></div>';
               updateAnalytics([]);
               return;
           }
@@ -204,7 +217,7 @@ function fetchWorkouts() {
                   <span>${w.weight} lbs</span>
                   <span>${volume.toLocaleString()} vol</span>
                 </div>
-                <div class="workout-notes">${w.notes ? w.notes : 'No notes added for this session.'}</div>
+                <div class="workout-notes">${w.notes ? w.notes : 'No notes for this workout.'}</div>
               `;
               list.appendChild(div);
           });
@@ -377,6 +390,87 @@ form.addEventListener('input', function() {
   }, 450);
 });
 
+// ─── Plan Loader ───────────────────────────────────────────
+async function loadProgramsForPicker() {
+  try {
+    const res = await fetch('/api/programs');
+    if (!res.ok) return;
+    const programs = await res.json();
+    if (!programs.length) return;
+
+    const panel = document.getElementById('plan-loader');
+    const select = document.getElementById('plan-day-select');
+
+    programs.forEach(prog => {
+      if (!prog.days.length) return;
+      const group = document.createElement('optgroup');
+      group.label = prog.name;
+      prog.days.forEach(day => {
+        const opt = new Option(day.label, String(day.id));
+        opt.dataset.exercises = JSON.stringify(day.exercises);
+        opt.dataset.dayLabel = day.label;
+        group.appendChild(opt);
+      });
+      select.appendChild(group);
+    });
+
+    if (select.options.length > 1) {
+      panel.style.display = '';
+    }
+
+    select.addEventListener('change', () => {
+      const shelf = document.getElementById('plan-exercise-shelf');
+      if (!select.value) { shelf.innerHTML = ''; return; }
+      const selected = select.options[select.selectedIndex];
+      const exercises = JSON.parse(selected.dataset.exercises || '[]');
+      const label = selected.dataset.dayLabel || '';
+      renderPlanChips(exercises, label);
+    });
+  } catch (e) {
+    console.error('Failed to load programs for plan picker', e);
+  }
+}
+
+function renderPlanChips(exercises, dayLabel) {
+  const shelf = document.getElementById('plan-exercise-shelf');
+  if (!exercises.length) {
+    shelf.innerHTML = '<span class="plan-empty-text">No exercises defined for this day yet.</span>';
+    return;
+  }
+  shelf.innerHTML = exercises.map((ex, i) =>
+    `<button type="button" class="plan-chip" data-idx="${i}">
+      <span class="plan-chip-name">${ex.exercise_name}</span>
+      <span class="plan-chip-meta">${ex.target_sets}&times;${ex.target_reps}</span>
+    </button>`
+  ).join('');
+  shelf.querySelectorAll('.plan-chip').forEach((btn, i) => {
+    btn.addEventListener('click', () => loadPlanExercise(exercises[i], dayLabel));
+  });
+}
+
+function loadPlanExercise(ex, dayLabel) {
+  const lbl = (dayLabel || '').toLowerCase();
+  const daytypeEl = document.getElementById('daytype');
+  if (lbl.includes('push')) daytypeEl.value = 'Push';
+  else if (lbl.includes('pull')) daytypeEl.value = 'Pull';
+  else if (lbl.includes('leg')) daytypeEl.value = 'Legs';
+  updateExercises();
+
+  const exerciseEl = document.getElementById('exercise');
+  let opt = Array.from(exerciseEl.options).find(o => o.value === ex.exercise_name);
+  if (!opt) {
+    opt = new Option(ex.exercise_name, ex.exercise_name);
+    exerciseEl.prepend(opt);
+  }
+  exerciseEl.value = ex.exercise_name;
+
+  if (ex.target_sets) document.getElementById('sets').value = ex.target_sets;
+  if (ex.target_reps) document.getElementById('reps').value = ex.target_reps;
+
+  document.getElementById('workout-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+loadProgramsForPicker();
 fetchWorkouts();
 </script>
 {% endblock %}

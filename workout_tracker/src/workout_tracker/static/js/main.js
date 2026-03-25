@@ -10,12 +10,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const appAudio = window.__wipAudio || {
     started: false,
     bgMusic: null,
-    isMuted: localStorage.getItem('wipMusicMuted') === 'true'
+    isMuted: localStorage.getItem('wipMusicMuted') === 'true',
+    currentTrack: localStorage.getItem('wipMusicTrack') || 'Wii.mp3'
   };
   window.__wipAudio = appAudio;
 
+  const dedupeAudioToggles = () => {
+    const toggles = Array.from(document.querySelectorAll('[data-audio-toggle="true"]'));
+    if (toggles.length <= 1) {
+      return toggles[0] || null;
+    }
+
+    // Keep the first toggle in DOM order and remove accidental duplicates.
+    toggles.slice(1).forEach(toggle => toggle.remove());
+    return toggles[0];
+  };
+
+  const buildTrackUrl = trackName => `/static/sounds/${encodeURIComponent(trackName)}`;
+
+  const getTrackPickers = () => Array.from(document.querySelectorAll('[data-music-picker="true"]'));
+
+  const ensureBgMusic = () => {
+    const targetSrc = buildTrackUrl(appAudio.currentTrack);
+
+    if (!appAudio.bgMusic) {
+      appAudio.bgMusic = new Audio(targetSrc);
+      appAudio.bgMusic.loop = true;
+      appAudio.bgMusic.volume = 0.1;
+      return;
+    }
+
+    const currentSrc = appAudio.bgMusic.getAttribute('src') || '';
+    if (currentSrc !== targetSrc) {
+      appAudio.bgMusic.pause();
+      appAudio.bgMusic = new Audio(targetSrc);
+      appAudio.bgMusic.loop = true;
+      appAudio.bgMusic.volume = 0.1;
+      appAudio.started = false;
+    }
+  };
+
   const updateToggleLabel = () => {
-    const toggle = document.querySelector('[data-audio-toggle="true"]');
+    const toggle = dedupeAudioToggles();
     if (!toggle) {
       return;
     }
@@ -32,9 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
       audioContext.resume().catch(() => {});
     }
 
-    appAudio.bgMusic = appAudio.bgMusic || new Audio('/static/sounds/Wii.mp3');
-    appAudio.bgMusic.loop = true;
-    appAudio.bgMusic.volume = 0.1;
+    ensureBgMusic();
 
     appAudio.bgMusic.play().then(() => {
       appAudio.started = true;
@@ -62,6 +96,80 @@ document.addEventListener('DOMContentLoaded', () => {
       startMusicIfNeeded();
     }
     updateToggleLabel();
+  };
+
+  const setTrack = trackName => {
+    if (!trackName || trackName === appAudio.currentTrack) {
+      return;
+    }
+
+    const wasPlaying = appAudio.started && !appAudio.isMuted;
+    appAudio.currentTrack = trackName;
+    localStorage.setItem('wipMusicTrack', trackName);
+    appAudio.started = false;
+
+    ensureBgMusic();
+    if (wasPlaying) {
+      startMusicIfNeeded();
+    }
+  };
+
+  const syncPickerSelection = () => {
+    getTrackPickers().forEach(picker => {
+      if (picker.value !== appAudio.currentTrack) {
+        picker.value = appAudio.currentTrack;
+      }
+    });
+  };
+
+  const populateTrackPicker = async () => {
+    const pickers = getTrackPickers();
+    if (!pickers.length) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/music/tracks', { credentials: 'same-origin' });
+      if (!response.ok) {
+        throw new Error('Failed to load tracks');
+      }
+
+      const tracks = await response.json();
+      if (!Array.isArray(tracks) || tracks.length === 0) {
+        pickers.forEach(picker => {
+          picker.innerHTML = '<option value="">No tracks found</option>';
+          picker.disabled = true;
+        });
+        return;
+      }
+
+      if (!tracks.includes(appAudio.currentTrack)) {
+        appAudio.currentTrack = tracks[0];
+        localStorage.setItem('wipMusicTrack', appAudio.currentTrack);
+      }
+
+      const optionsMarkup = tracks
+        .map(track => `<option value="${track}">${track.replace(/\.[^/.]+$/, '')}</option>`)
+        .join('');
+
+      pickers.forEach(picker => {
+        picker.innerHTML = optionsMarkup;
+        picker.value = appAudio.currentTrack;
+        picker.disabled = false;
+        picker.onchange = () => {
+          setTrack(picker.value);
+          syncPickerSelection();
+          if (!appAudio.isMuted) {
+            startMusicIfNeeded();
+          }
+        };
+      });
+    } catch {
+      pickers.forEach(picker => {
+        picker.innerHTML = '<option value="">Tracks unavailable</option>';
+        picker.disabled = true;
+      });
+    }
   };
 
   const playFuturisticClick = () => {
@@ -183,7 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     executeInlineScripts(currentMain);
+    dedupeAudioToggles();
     updateToggleLabel();
+    populateTrackPicker();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -241,7 +351,9 @@ document.addEventListener('DOMContentLoaded', () => {
     link.addEventListener('click', event => event.preventDefault());
   });
 
+  dedupeAudioToggles();
   updateToggleLabel();
+  populateTrackPicker();
 
   const hasMusicToggle = Boolean(document.querySelector('[data-audio-toggle="true"]'));
   if (hasMusicToggle && !appAudio.isMuted) {
