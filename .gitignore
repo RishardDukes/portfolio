@@ -30,6 +30,14 @@ var/
 # Logs
 *.log
 
+# Local environment files
+.env
+
+# SQLite / local runtime databases
+*.db
+instance/*.db
+**/instance/*.db
+
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
 
