@@ -1,6 +1,16 @@
 # WIP — Workout Intelligence Platform
 
+[Back to Portfolio](../README.md)
+
+[Related: AI Resume Parser](../resume_parser/README.md) | [Related: Tax Return AI Calculator](../tax_ai_calculator/README.md)
+
 A workout tracking web app built with Flask, SQLAlchemy, and vanilla JS. It brings together structured logging, flexible training plans, lightweight analytics, and Hercules AI coaching in one focused interface.
+
+## Preview
+
+![Workout Tracker preview](docs/preview.svg)
+
+This preview highlights the four main product surfaces: the dashboard, tracker, program builder, and Hercules AI coaching layer.
 
 ## Features
 

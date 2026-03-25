@@ -1,102 +1,103 @@
 # Portfolio
 
-**Rishard Dukes's Online Portfolio**  
-Computational Science Grad • AI/ML & Software • IT Technician → Software/AI Engineer  
+Rishard Dukes  
+Computational Science graduate focused on AI/ML, software engineering, and practical full-stack systems.  
 Florida State University (B.S.)
 
----
+## Overview
 
-## *Projects you can actually use.*
+This portfolio centers on projects that are meant to be used, not just demonstrated. The work here reflects a mix of AI-assisted workflows, full-stack application development, and problem solving grounded in real user needs.
 
-That has grown into my motto.
+Current focus areas:
 
-This portfolio focuses on **real, functional applications**—not just academic demos. Every highlighted project is built with usability, structure, and real-world relevance in mind.
+- AI-assisted applications and document workflows
+- Flask-based web products and backend systems
+- Practical tools with clear UX and real-world utility
 
-I build systems that combine:
-- AI-assisted workflows  
-- full-stack development  
-- practical problem solving  
+## Contact
 
----
-
-📫 **Contacts:**  
-- [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)  
-- [GitHub](https://github.com/RishardDukes)  
+- [LinkedIn](https://www.linkedin.com/in/rishard-dukes/)
+- [GitHub](https://github.com/RishardDukes)
 - [Email](mailto:scholasticdukes@gmail.com)
 
----
+## Core Skills
 
-# 🧰 Core Skills
+### Programming
 
-### 💻 Programming
 Python, C++, MATLAB, HTML, JavaScript, R
 
-### 🤖 AI / Machine Learning
-- AI-assisted workflows (OpenAI APIs, prompt engineering)  
-- Document parsing & structured extraction  
-- Clustering, PCA, and foundational ML concepts  
+### AI / Machine Learning
 
-### 🛠 Full Stack & Tools
-Flask, SQLite, REST APIs, Git/GitHub, VS Code, Virtualenv
+- AI-assisted workflows and prompt engineering
+- Document parsing and structured extraction
+- Clustering, PCA, and foundational machine learning concepts
 
-### 🌐 IT & Systems
-- Device setup & troubleshooting  
-- Networking fundamentals  
-- Workflow automation & system support  
+### Full Stack / Tools
 
----
-# 📂 Main Projects
+Flask, SQLite, REST APIs, Git/GitHub, VS Code, virtual environments
 
----
+### IT / Systems
 
-## 🧾 AI Resume Parser
+- Device setup and troubleshooting
+- Networking fundamentals
+- Workflow automation and technical support
 
-**What is it?**  
-An AI-powered tool that parses resumes and extracts structured information such as skills, experience, and key sections.
+## Featured Projects
 
-**Why it matters:**  
-Demonstrates real-world **AI + document processing**, applicable to hiring systems, automation pipelines, and SaaS tools.
+### [AI Resume Parser](resume_parser/README.md)
 
-**Tech:**  
-Python, NLP techniques, AI integration
+**Overview**  
+An AI-assisted resume parsing tool that extracts structured information such as contact details, experience, education, and skills from resume content.
 
----
+**Highlights**
 
-## 💰 Tax Return AI Calculator
+- Structured extraction from unstructured resume text
+- Job-matching potential for hiring and recruiting workflows
+- Strong fit for HR tooling, automation pipelines, and SaaS-style document processing
 
-**What is it?**  
-A full-stack Flask application that processes uploaded tax documents and estimates federal tax outcomes using AI-assisted parsing.
+**Tech**  
+Python, NLP workflows, AI-assisted extraction
 
-**Key Features:**
-- Upload PDFs, images, or text  
-- OCR + text extraction pipeline  
-- Backend processing routes  
-- Clean UI for results  
+[Project README](resume_parser/README.md)
 
-**Tech:**  
+### [Tax Return AI Calculator](tax_ai_calculator/README.md)
+
+**Overview**  
+A Flask application that processes uploaded financial documents and estimates federal tax outcomes using AI-assisted parsing and calculation logic.
+
+**Highlights**
+
+- Accepts PDFs, images, and text-based inputs
+- Uses OCR and extraction logic to interpret financial documents
+- Presents results through a clear web interface instead of a script-only workflow
+
+**Tech**  
 Python, Flask, OpenAI API, PyPDF2, Pytesseract, HTML/CSS/JS
 
----
+[Project README](tax_ai_calculator/README.md)
 
-## 🏋️ Workout Tracker + Hercules AI
+### [Workout Tracker + Hercules AI](workout_tracker/README.md)
 
-**What is it?**  
-A full-stack workout tracking system enhanced with **Hercules AI**, a coaching layer designed to make training logs more useful, more organized, and more actionable over time.
+**Overview**  
+A full-stack workout tracking application that combines workout logging, reusable training programs, lightweight analytics, and a coaching layer powered by Hercules AI.
 
-**Key Features:**
-- User authentication (login/register)  
-- Workout logging + persistent database (SQLite)  
-- Reusable training programs with custom days and exercises  
-- Live dashboard with progress stats and session history  
-- Music picker + interactive UI sound feedback  
-- AI coaching with science-backed guidance  
+**Highlights**
 
-**Hercules AI:**
-- Analyzes workout history, split balance, and consistency trends  
-- Pulls from PubMed Central research for more grounded coaching context  
-- Surfaces coaching tips, reasoning, and research links directly in the dashboard  
-- Supports flexible workout planning without forcing a rigid schedule  
+- Structured workout logging with persistent session history
+- Flexible training programs with custom days and exercises
+- Dashboard analytics for progress, volume, and exercise trends
+- Built-in music controls and interactive product polish
+- Research-backed coaching prompts surfaced directly in the app
 
-**Tech:**  
+**Hercules AI**
+
+- Analyzes workout history, split balance, and consistency patterns
+- Uses PubMed Central research to support coaching context
+- Surfaces tips, reasoning, and research links in the dashboard
+- Supports flexible training workflows without forcing rigid schedules
+
+**Tech**  
 Python, Flask, SQLite, JavaScript, HTML/CSS
+
+[Project README](workout_tracker/README.md)
 

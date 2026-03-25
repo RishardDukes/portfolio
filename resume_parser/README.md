@@ -1,6 +1,12 @@
 # Resume Parser & Job Matcher
 
-Extract information from resumes and match them against job descriptions.
+[Back to Portfolio](../README.md)
+
+Extract information from resumes and match the results against job descriptions in a way that can support recruiting workflows, screening tools, and structured candidate evaluation.
+
+## Overview
+
+This project explores how resume content can move from raw, inconsistent documents into structured data that is easier to search, compare, and score. It combines parsing, AI-assisted extraction, and matching logic in a web-based workflow.
 
 ## Features
 - [ ] Parse resume files (PDF, DOCX, TXT)
@@ -15,6 +21,12 @@ Extract information from resumes and match them against job descriptions.
 - [ ] Calculate compatibility score
 - [ ] Web interface for upload and matching
 - [ ] Database of job descriptions
+
+## Why It Matters
+
+- Turns unstructured resume content into usable structured data
+- Creates a foundation for candidate scoring and job matching workflows
+- Shows practical overlap between AI extraction, document handling, and product-oriented web development
 
 ## Project Structure
 ```
@@ -38,6 +50,11 @@ resume_parser/
 - Similarity algorithms
 - Vector embeddings for semantic matching
 - OpenAI for intelligent parsing
+
+## Related Projects
+
+- [Tax Return AI Calculator](../tax_ai_calculator/README.md)
+- [Workout Tracker + Hercules AI](../workout_tracker/README.md)
 
 ## Getting Started
 1. Parse resume files

@@ -1,6 +1,12 @@
 # Tax Return AI Calculator
 
+[Back to Portfolio](../README.md)
+
 An intelligent system that analyzes financial documents and calculates tax returns using AI.
+
+## Overview
+
+This project focuses on a practical document-to-decision workflow: upload financial records, extract relevant tax information, and return a usable estimate through a web interface. It combines OCR, AI-assisted parsing, and tax calculation logic in a way that feels closer to a product than a script.
 
 ## Features
 - 📄 Document parsing (PDFs, images, text files)
@@ -8,6 +14,12 @@ An intelligent system that analyzes financial documents and calculates tax retur
 - 💰 Automated tax calculation with 2024 tax brackets
 - 🌐 Modern web interface with drag-and-drop uploads
 - 📊 Instant refund or tax owed calculations
+
+## Why It Matters
+
+- Connects AI extraction to a concrete financial use case
+- Demonstrates OCR, parsing, and decision logic in one workflow
+- Shows how AI can support structured analysis rather than just text generation
 
 ## Quick Start
 
@@ -184,4 +196,9 @@ Educational project for learning Python, Flask, and AI integration.
 
 ## Support
 For issues or questions, check the troubleshooting section or review the code comments.
+
+## Related Projects
+
+- [AI Resume Parser](../resume_parser/README.md)
+- [Workout Tracker + Hercules AI](../workout_tracker/README.md)
 
