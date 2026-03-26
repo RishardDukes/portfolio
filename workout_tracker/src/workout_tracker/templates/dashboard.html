@@ -9,7 +9,7 @@
         <div class="hero-actions">
             <a class="btn btn-primary" href="{{ url_for('main.tracker') }}" data-spa-nav="true">Open Tracker</a>
             <a class="btn btn-secondary" href="{{ url_for('main.programs') }}" data-spa-nav="true">My Programs</a>
-            <a class="btn btn-secondary" href="{{ url_for('auth.logout') }}">Sign Out</a>
+          <a class="btn btn-secondary" href="{{ url_for('main.nutrition') }}" data-spa-nav="true">Nutrition</a>
         </div>
     </div>
     <div class="hero-side-card">
@@ -34,6 +34,11 @@
         <p class="card-label">Training Programs</p>
         <h3>Plan your splits</h3>
         <p>Define days and exercises for each split. Load any day into the tracker to pre-fill the form — or ignore it and log freely.</p>
+    </article>
+    <article class="info-card panel">
+      <p class="card-label">Nutrition</p>
+      <h3>Match food to the plan</h3>
+      <p>Set calorie and macro targets, log meals by day, and let Hercules suggest foods that fit the remainder of your intake.</p>
     </article>
 </section>
 

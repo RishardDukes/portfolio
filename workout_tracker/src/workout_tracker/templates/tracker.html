@@ -38,6 +38,17 @@
   </article>
 </section>
 
+<section class="panel performance-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="card-label">Performance snapshot</p>
+      <h2>Top exercise progress</h2>
+    </div>
+    <div class="subdued-text">Estimated 1RM and latest trend</div>
+  </div>
+  <div id="performance-cards" class="performance-cards"></div>
+</section>
+
 <div class="panel plan-loader-panel" id="plan-loader" style="display:none">
   <div class="plan-loader-header">
     <div>
@@ -159,6 +170,7 @@ const sideGroup = document.getElementById('side-group');
 const form = document.getElementById('workout-form');
 const list = document.getElementById('workout-list');
 const dateInput = document.getElementById('date');
+const performanceCards = document.getElementById('performance-cards');
 
 const today = new Date().toISOString().split('T')[0];
 dateInput.value = today;
@@ -196,6 +208,7 @@ function fetchWorkouts() {
           if (!data.length) {
               list.innerHTML = '<div class="empty-state"><h3>No workouts yet</h3><p>Your recent sessions will appear here once you save your first entry.</p></div>';
               updateAnalytics([]);
+              fetchPerformanceCards();
               return;
           }
 
@@ -222,7 +235,42 @@ function fetchWorkouts() {
               list.appendChild(div);
           });
           updateAnalytics(data);
+          fetchPerformanceCards();
       });
+}
+
+function renderPerformanceCards(cards) {
+  if (!cards.length) {
+    performanceCards.innerHTML = '<div class="empty-state"><h3>No performance cards yet</h3><p>Log a few sessions for the same exercise to unlock trend snapshots.</p></div>';
+    return;
+  }
+
+  performanceCards.innerHTML = cards.map(card => {
+    const delta = card.delta_from_previous;
+    const deltaLabel = delta == null ? 'First logged set' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)} lbs vs last`;
+    const trendLabel = `${card.trend_weight_delta > 0 ? '+' : ''}${card.trend_weight_delta.toFixed(1)} lbs (5-session trend)`;
+    return `
+      <article class="performance-card">
+        <div class="performance-card-top">
+          <h3>${card.exercise}</h3>
+          <span class="summary-meta">${card.sessions} logs</span>
+        </div>
+        <div class="workout-metrics">
+          <span>Latest ${Number(card.latest_weight || 0).toFixed(1)} lbs x ${card.latest_reps} reps</span>
+          <span>Best ${Number(card.best_weight || 0).toFixed(1)} lbs</span>
+          <span>e1RM ${Number(card.best_e1rm || 0).toFixed(1)} lbs</span>
+        </div>
+        <div class="workout-notes">${deltaLabel} • ${trendLabel}</div>
+      </article>
+    `;
+  }).join('');
+}
+
+function fetchPerformanceCards() {
+  fetch('/api/workouts/performance')
+    .then(r => r.ok ? r.json() : [])
+    .then(renderPerformanceCards)
+    .catch(() => renderPerformanceCards([]));
 }
 
 function deleteWorkout(id) {
@@ -230,6 +278,7 @@ function deleteWorkout(id) {
         if (r.ok) fetchWorkouts();
     });
 }
+window.deleteWorkout = deleteWorkout;
 
 form.addEventListener('submit', function(e) {
     e.preventDefault();

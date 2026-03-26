@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # Simple in-memory cache for API responses (in production, use Redis)
 _RESEARCH_CACHE = {}
 _CACHE_LOCK = threading.Lock()
+_FOOD_CACHE = {}
 
 
 # Strength standards (lbs) - based on Symmetric Strength, ExRx data
@@ -71,6 +72,17 @@ class OnlineDataFetcher:
     
     # Cache for 24 hours to avoid rate limiting
     CACHE_TTL = 86400
+
+    @staticmethod
+    def _safe_float(value: Any) -> float:
+        if value in (None, ""):
+            return 0.0
+        if isinstance(value, str):
+            value = value.replace(",", ".").strip()
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
     
     @staticmethod
     def _fetch_pubmed_async(query: str, max_results: int = 3) -> None:
@@ -194,6 +206,69 @@ class OnlineDataFetcher:
         
         return insights
 
+    @staticmethod
+    def fetch_food_options(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """Fetch food suggestions from OpenFoodFacts for real-world meal ideas."""
+        cache_key = f"food:{query.lower()}:{max_results}"
+        if cache_key in _FOOD_CACHE:
+            return _FOOD_CACHE[cache_key]
+
+        try:
+            foods = []
+            seen_products = set()
+            query_variants = [query.strip()]
+            if " " in query:
+                tokens = [token for token in query.lower().split() if len(token) > 2]
+                query_variants.extend(tokens)
+                if tokens:
+                    query_variants.append(tokens[-1])
+
+            for query_variant in query_variants:
+                if not query_variant or len(foods) >= max_results:
+                    continue
+                response = requests.get(
+                    "https://world.openfoodfacts.org/cgi/search.pl",
+                    params={
+                        "search_terms": query_variant,
+                        "search_simple": 1,
+                        "action": "process",
+                        "json": 1,
+                        "page_size": max_results,
+                    },
+                    timeout=5,
+                    headers={"User-Agent": "HerculesWorkoutTracker/1.0"},
+                )
+                response.raise_for_status()
+                payload = response.json()
+                for product in payload.get("products", [])[:max_results]:
+                    nutriments = product.get("nutriments", {})
+                    name = (product.get("product_name") or product.get("generic_name") or "").strip()
+                    if not name:
+                        continue
+                    brand = (product.get("brands") or "").strip()
+                    dedupe_key = (name.lower(), brand.lower())
+                    if dedupe_key in seen_products:
+                        continue
+                    seen_products.add(dedupe_key)
+                    foods.append({
+                        "name": name,
+                        "brand": brand,
+                        "calories": round(OnlineDataFetcher._safe_float(nutriments.get("energy-kcal_100g")), 1),
+                        "protein_g": round(OnlineDataFetcher._safe_float(nutriments.get("proteins_100g")), 1),
+                        "carbs_g": round(OnlineDataFetcher._safe_float(nutriments.get("carbohydrates_100g")), 1),
+                        "fats_g": round(OnlineDataFetcher._safe_float(nutriments.get("fat_100g")), 1),
+                        "fiber_g": round(OnlineDataFetcher._safe_float(nutriments.get("fiber_100g")), 1),
+                        "url": product.get("url"),
+                        "source": "OpenFoodFacts",
+                    })
+                    if len(foods) >= max_results:
+                        break
+            _FOOD_CACHE[cache_key] = foods
+            return foods
+        except Exception as exc:
+            logger.debug("Food fetch error for '%s': %s", query, exc)
+            return []
+
 
 class HerculesEngine:
     """AI coaching engine that analyzes workouts and generates personalized advice."""
@@ -216,6 +291,135 @@ class HerculesEngine:
             }
             for w in workouts
         ]
+
+    @staticmethod
+    def calculate_nutrition_targets(profile: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate TDEE and macro targets using Mifflin-St Jeor."""
+        sex = (profile.get("sex") or "male").lower()
+        age = max(int(profile.get("age") or 25), 14)
+        weight_lbs = max(float(profile.get("weight_lbs") or 180), 50)
+        height_inches = max(float(profile.get("height_inches") or 70), 48)
+        activity_multiplier = max(float(profile.get("activity_multiplier") or 1.55), 1.2)
+        goal_type = (profile.get("goal_type") or "maintain").lower()
+        daily_adjustment = int(profile.get("daily_calorie_adjustment") or 0)
+
+        weight_kg = weight_lbs * 0.453592
+        height_cm = height_inches * 2.54
+        sex_adjustment = 5 if sex == "male" else -161
+        bmr = (10 * weight_kg) + (6.25 * height_cm) - (5 * age) + sex_adjustment
+        tdee = bmr * activity_multiplier
+
+        # Signed adjustment semantics:
+        # negative values reduce calories (deficit), positive values increase calories (surplus).
+        # If no manual value is provided, fall back to a goal-based default.
+        if daily_adjustment != 0:
+            target_calories = tdee + daily_adjustment
+        elif goal_type == "cut":
+            target_calories = tdee - 300
+        elif goal_type == "bulk":
+            target_calories = tdee + 250
+        else:
+            target_calories = tdee
+
+        target_calories = max(target_calories, 1200)
+
+        protein_g = max(weight_lbs * 0.9, 120)
+        fats_g = max(weight_lbs * 0.3, 45)
+        remaining_calories = max(target_calories - ((protein_g * 4) + (fats_g * 9)), 0)
+        carbs_g = remaining_calories / 4 if remaining_calories else 0
+        fiber_g = max((target_calories / 1000) * 14, 25)
+
+        return {
+            "bmr": round(bmr, 1),
+            "tdee": round(tdee, 1),
+            "target_calories": round(target_calories),
+            "target_protein_g": round(protein_g, 1),
+            "target_carbs_g": round(carbs_g, 1),
+            "target_fats_g": round(fats_g, 1),
+            "target_fiber_g": round(fiber_g, 1),
+        }
+
+    @staticmethod
+    def summarize_meals(meals: List[Any]) -> Dict[str, float]:
+        """Aggregate calories and macros for a collection of meals."""
+        return {
+            "calories": round(sum(float(getattr(meal, "calories", 0) or 0) for meal in meals), 1),
+            "protein_g": round(sum(float(getattr(meal, "protein_g", 0) or 0) for meal in meals), 1),
+            "carbs_g": round(sum(float(getattr(meal, "carbs_g", 0) or 0) for meal in meals), 1),
+            "fats_g": round(sum(float(getattr(meal, "fats_g", 0) or 0) for meal in meals), 1),
+            "fiber_g": round(sum(float(getattr(meal, "fiber_g", 0) or 0) for meal in meals), 1),
+        }
+
+    def generate_nutrition_tip(
+        self,
+        profile: Dict[str, Any],
+        meals: List[Any],
+        meal_name: str = "Next Meal",
+    ) -> Dict[str, Any]:
+        """Generate a meal-focused nutrition suggestion based on target gaps."""
+        targets = self.calculate_nutrition_targets(profile)
+        totals = self.summarize_meals(meals)
+        remaining = {
+            "calories": round(max(targets["target_calories"] - totals["calories"], 0), 1),
+            "protein_g": round(max(targets["target_protein_g"] - totals["protein_g"], 0), 1),
+            "carbs_g": round(max(targets["target_carbs_g"] - totals["carbs_g"], 0), 1),
+            "fats_g": round(max(targets["target_fats_g"] - totals["fats_g"], 0), 1),
+            "fiber_g": round(max(targets["target_fiber_g"] - totals["fiber_g"], 0), 1),
+        }
+
+        meals_per_day = max(int(profile.get("meals_per_day") or 4), 1)
+        logged_meals = len(meals)
+        meals_left = max(meals_per_day - logged_meals, 1)
+        per_meal = {key: round(value / meals_left, 1) for key, value in remaining.items()}
+
+        focus_macro = max(
+            ["protein_g", "carbs_g", "fats_g", "fiber_g"],
+            key=lambda key: remaining[key]
+        )
+        macro_labels = {
+            "protein_g": "protein",
+            "carbs_g": "carbs",
+            "fats_g": "fats",
+            "fiber_g": "fiber",
+        }
+        meal_keyword = (meal_name or "meal").lower()
+        search_terms = {
+            "protein_g": f"{meal_keyword} protein food",
+            "carbs_g": f"{meal_keyword} carb food",
+            "fats_g": f"{meal_keyword} healthy fat food",
+            "fiber_g": f"{meal_keyword} high fiber food",
+        }
+        food_options = OnlineDataFetcher.fetch_food_options(search_terms[focus_macro], max_results=4)
+
+        if not food_options:
+            food_options = OnlineDataFetcher.fetch_food_options(macro_labels[focus_macro], max_results=4)
+
+        category = "Meal Planning"
+        tip = (
+            f"For {meal_name}, aim for about {per_meal['calories']:.0f} kcal with "
+            f"{per_meal['protein_g']:.0f}g protein, {per_meal['carbs_g']:.0f}g carbs, and {per_meal['fats_g']:.0f}g fats."
+        )
+        reasoning = (
+            f"You're still short on {remaining['calories']:.0f} kcal today, with {remaining[focus_macro]:.0f}g of "
+            f"{macro_labels[focus_macro]} left to cover. Splitting the remainder across {meals_left} meal(s) keeps the day realistic."
+        )
+        if totals["calories"] >= targets["target_calories"] * 0.98 and remaining["protein_g"] <= 10:
+            category = "Nutrition On Track"
+            tip = "You are close to your calorie and protein targets already. Keep the rest of the day lighter and prioritize micronutrient-dense foods."
+            reasoning = "The main job now is recovery quality and consistency rather than forcing extra intake."
+
+        return {
+            "category": category,
+            "tip": tip,
+            "reasoning": reasoning,
+            "source": "Hercules AI + OpenFoodFacts",
+            "meal_name": meal_name,
+            "targets": targets,
+            "totals": totals,
+            "remaining": remaining,
+            "per_meal": per_meal,
+            "food_options": food_options,
+        }
 
     def _get_recent_workouts(self, days: int = 7) -> List[Dict]:
         """Get workouts from the last N days."""

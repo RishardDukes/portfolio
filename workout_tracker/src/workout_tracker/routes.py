@@ -1,12 +1,139 @@
-from datetime import datetime
+from datetime import datetime, date
 from pathlib import Path
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from .db import db
-from .models import Workout, Program, ProgramDay, ProgramExercise
-from .hercules.engine import HerculesEngine
+from .models import (
+    Workout,
+    Program,
+    ProgramDay,
+    ProgramExercise,
+    NutritionProfile,
+    MealEntry,
+    SavedMeal,
+    BodyMetric,
+)
+from .hercules.engine import HerculesEngine, OnlineDataFetcher
 
 main_bp = Blueprint("main", __name__)
+
+
+ACTIVITY_MULTIPLIERS = {
+    "sedentary": 1.2,
+    "light": 1.375,
+    "moderate": 1.55,
+    "active": 1.725,
+    "very_active": 1.9,
+}
+
+
+def _parse_iso_date(raw_date):
+    if not raw_date:
+        return date.today()
+    try:
+        return datetime.strptime(raw_date, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _serialize_profile(profile):
+    return {
+        "sex": profile.sex,
+        "age": profile.age,
+        "height_inches": profile.height_inches,
+        "weight_lbs": profile.weight_lbs,
+        "activity_level": profile.activity_level,
+        "activity_multiplier": profile.activity_multiplier,
+        "goal_type": profile.goal_type,
+        "daily_calorie_adjustment": profile.daily_calorie_adjustment,
+        "meals_per_day": profile.meals_per_day,
+        "tdee": profile.tdee,
+        "target_calories": profile.target_calories,
+        "target_protein_g": profile.target_protein_g,
+        "target_carbs_g": profile.target_carbs_g,
+        "target_fats_g": profile.target_fats_g,
+        "target_fiber_g": profile.target_fiber_g,
+    }
+
+
+def _serialize_meal(meal):
+    return {
+        "id": meal.id,
+        "date": meal.date.isoformat(),
+        "meal_name": meal.meal_name,
+        "food_name": meal.food_name,
+        "serving_size": meal.serving_size or "",
+        "calories": meal.calories,
+        "protein_g": meal.protein_g,
+        "carbs_g": meal.carbs_g,
+        "fats_g": meal.fats_g,
+        "fiber_g": meal.fiber_g,
+        "notes": meal.notes or "",
+    }
+
+
+def _serialize_saved_meal(saved_meal):
+    return {
+        "id": saved_meal.id,
+        "name": saved_meal.name,
+        "default_meal_name": saved_meal.default_meal_name,
+        "food_name": saved_meal.food_name,
+        "serving_size": saved_meal.serving_size or "",
+        "calories": saved_meal.calories,
+        "protein_g": saved_meal.protein_g,
+        "carbs_g": saved_meal.carbs_g,
+        "fats_g": saved_meal.fats_g,
+        "fiber_g": saved_meal.fiber_g,
+        "notes": saved_meal.notes or "",
+    }
+
+
+def _serialize_body_metric(metric):
+    return {
+        "id": metric.id,
+        "date": metric.date.isoformat(),
+        "weight_lbs": metric.weight_lbs,
+        "body_fat_pct": metric.body_fat_pct,
+        "waist_inches": metric.waist_inches,
+        "notes": metric.notes or "",
+    }
+
+
+def _get_or_create_nutrition_profile():
+    profile = NutritionProfile.query.filter_by(user_id=current_user.id).first()
+    if profile:
+        return profile
+
+    defaults = HerculesEngine.calculate_nutrition_targets({
+        "sex": "male",
+        "age": 25,
+        "height_inches": 70,
+        "weight_lbs": 180,
+        "activity_multiplier": ACTIVITY_MULTIPLIERS["moderate"],
+        "goal_type": "maintain",
+        "daily_calorie_adjustment": 0,
+    })
+    profile = NutritionProfile(
+        user_id=current_user.id,
+        sex="male",
+        age=25,
+        height_inches=70,
+        weight_lbs=180,
+        activity_level="moderate",
+        activity_multiplier=ACTIVITY_MULTIPLIERS["moderate"],
+        goal_type="maintain",
+        daily_calorie_adjustment=0,
+        meals_per_day=4,
+        tdee=defaults["tdee"],
+        target_calories=defaults["target_calories"],
+        target_protein_g=defaults["target_protein_g"],
+        target_carbs_g=defaults["target_carbs_g"],
+        target_fats_g=defaults["target_fats_g"],
+        target_fiber_g=defaults["target_fiber_g"],
+    )
+    db.session.add(profile)
+    db.session.commit()
+    return profile
 
 @main_bp.route("/")
 def home():
@@ -23,6 +150,12 @@ def dashboard():
 @login_required
 def tracker():
     return render_template("tracker.html")
+
+
+@main_bp.route("/nutrition")
+@login_required
+def nutrition():
+    return render_template("nutrition.html")
 
 @main_bp.route("/api/workouts", methods=["GET"])
 @login_required
@@ -81,6 +214,45 @@ def delete_workout(wid):
     db.session.delete(w)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@main_bp.route("/api/workouts/performance", methods=["GET"])
+@login_required
+def workout_performance_cards():
+    rows = (
+        Workout.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Workout.date.asc(), Workout.id.asc())
+        .all()
+    )
+    by_exercise = {}
+    for workout in rows:
+        by_exercise.setdefault(workout.exercise, []).append(workout)
+
+    cards = []
+    for exercise, exercise_rows in by_exercise.items():
+        latest = exercise_rows[-1]
+        previous = exercise_rows[-2] if len(exercise_rows) > 1 else None
+        best_weight = max(float(row.weight or 0) for row in exercise_rows)
+        best_e1rm = max(float(row.weight or 0) * (1 + (float(row.reps or 0) / 30.0)) for row in exercise_rows)
+        recent_window = exercise_rows[-5:]
+        first_recent = recent_window[0]
+        last_recent = recent_window[-1]
+        trend_weight_delta = round(float(last_recent.weight or 0) - float(first_recent.weight or 0), 1)
+
+        cards.append({
+            "exercise": exercise,
+            "latest_weight": float(latest.weight or 0),
+            "latest_reps": int(latest.reps or 0),
+            "best_weight": round(best_weight, 1),
+            "best_e1rm": round(best_e1rm, 1),
+            "sessions": len(exercise_rows),
+            "delta_from_previous": round(float(latest.weight or 0) - float(previous.weight or 0), 1) if previous else None,
+            "trend_weight_delta": trend_weight_delta,
+        })
+
+    cards.sort(key=lambda item: (item["sessions"], item["latest_weight"]), reverse=True)
+    return jsonify(cards[:6])
 
 @main_bp.route("/api/hercules/coaching-tip", methods=["GET"])
 @login_required
@@ -271,3 +443,293 @@ def delete_program_exercise(eid):
     db.session.delete(e)
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@main_bp.route("/api/nutrition/profile", methods=["GET"])
+@login_required
+def get_nutrition_profile():
+    profile = _get_or_create_nutrition_profile()
+    return jsonify(_serialize_profile(profile))
+
+
+@main_bp.route("/api/nutrition/profile", methods=["POST"])
+@login_required
+def save_nutrition_profile():
+    profile = _get_or_create_nutrition_profile()
+    data = request.get_json(force=True) or {}
+
+    profile.sex = (data.get("sex") or profile.sex or "male").lower()
+    profile.age = max(int(data.get("age") or profile.age or 25), 14)
+    profile.height_inches = max(float(data.get("height_inches") or profile.height_inches or 70), 48)
+    profile.weight_lbs = max(float(data.get("weight_lbs") or profile.weight_lbs or 180), 50)
+    profile.activity_level = (data.get("activity_level") or profile.activity_level or "moderate").lower()
+    profile.activity_multiplier = ACTIVITY_MULTIPLIERS.get(profile.activity_level, 1.55)
+    profile.goal_type = (data.get("goal_type") or profile.goal_type or "maintain").lower()
+    profile.daily_calorie_adjustment = int(data.get("daily_calorie_adjustment") or profile.daily_calorie_adjustment or 0)
+    profile.meals_per_day = max(int(data.get("meals_per_day") or profile.meals_per_day or 4), 1)
+
+    targets = HerculesEngine.calculate_nutrition_targets({
+        "sex": profile.sex,
+        "age": profile.age,
+        "height_inches": profile.height_inches,
+        "weight_lbs": profile.weight_lbs,
+        "activity_multiplier": profile.activity_multiplier,
+        "goal_type": profile.goal_type,
+        "daily_calorie_adjustment": profile.daily_calorie_adjustment,
+    })
+    profile.tdee = targets["tdee"]
+    profile.target_calories = int(targets["target_calories"])
+    profile.target_protein_g = targets["target_protein_g"]
+    profile.target_carbs_g = targets["target_carbs_g"]
+    profile.target_fats_g = targets["target_fats_g"]
+    profile.target_fiber_g = targets["target_fiber_g"]
+
+    db.session.add(profile)
+    db.session.commit()
+    payload = _serialize_profile(profile)
+    payload["bmr"] = targets["bmr"]
+    return jsonify(payload)
+
+
+@main_bp.route("/api/nutrition/meals", methods=["GET"])
+@login_required
+def list_meals():
+    selected_date = _parse_iso_date(request.args.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+    rows = (
+        MealEntry.query
+        .filter_by(user_id=current_user.id, date=selected_date)
+        .order_by(MealEntry.created_at.asc(), MealEntry.id.asc())
+        .all()
+    )
+    return jsonify([_serialize_meal(row) for row in rows])
+
+
+@main_bp.route("/api/nutrition/meals", methods=["POST"])
+@login_required
+def create_meal():
+    data = request.get_json(force=True) or {}
+    selected_date = _parse_iso_date(data.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    food_name = (data.get("food_name") or "").strip()
+    if not food_name:
+        return jsonify({"error": "Food name required"}), 400
+
+    meal = MealEntry(
+        user_id=current_user.id,
+        date=selected_date,
+        meal_name=(data.get("meal_name") or "Breakfast").strip(),
+        food_name=food_name,
+        serving_size=(data.get("serving_size") or "").strip() or None,
+        calories=float(data.get("calories") or 0),
+        protein_g=float(data.get("protein_g") or 0),
+        carbs_g=float(data.get("carbs_g") or 0),
+        fats_g=float(data.get("fats_g") or 0),
+        fiber_g=float(data.get("fiber_g") or 0),
+        notes=(data.get("notes") or "").strip() or None,
+    )
+    db.session.add(meal)
+    db.session.commit()
+    return jsonify({"ok": True, "meal": _serialize_meal(meal)}), 201
+
+
+@main_bp.route("/api/nutrition/meals/<int:meal_id>", methods=["DELETE"])
+@login_required
+def delete_meal(meal_id):
+    meal = MealEntry.query.filter_by(id=meal_id, user_id=current_user.id).first()
+    if not meal:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(meal)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@main_bp.route("/api/nutrition/saved-meals", methods=["GET"])
+@login_required
+def list_saved_meals():
+    rows = (
+        SavedMeal.query
+        .filter_by(user_id=current_user.id)
+        .order_by(SavedMeal.created_at.desc(), SavedMeal.id.desc())
+        .all()
+    )
+    return jsonify([_serialize_saved_meal(row) for row in rows])
+
+
+@main_bp.route("/api/nutrition/saved-meals", methods=["POST"])
+@login_required
+def create_saved_meal():
+    data = request.get_json(force=True) or {}
+    food_name = (data.get("food_name") or "").strip()
+    if not food_name:
+        return jsonify({"error": "Food name required"}), 400
+
+    name = (data.get("name") or food_name).strip()
+    saved_meal = SavedMeal(
+        user_id=current_user.id,
+        name=name,
+        default_meal_name=(data.get("default_meal_name") or data.get("meal_name") or "Meal").strip(),
+        food_name=food_name,
+        serving_size=(data.get("serving_size") or "").strip() or None,
+        calories=float(data.get("calories") or 0),
+        protein_g=float(data.get("protein_g") or 0),
+        carbs_g=float(data.get("carbs_g") or 0),
+        fats_g=float(data.get("fats_g") or 0),
+        fiber_g=float(data.get("fiber_g") or 0),
+        notes=(data.get("notes") or "").strip() or None,
+    )
+    db.session.add(saved_meal)
+    db.session.commit()
+    return jsonify({"ok": True, "saved_meal": _serialize_saved_meal(saved_meal)}), 201
+
+
+@main_bp.route("/api/nutrition/saved-meals/<int:saved_meal_id>/log", methods=["POST"])
+@login_required
+def log_saved_meal(saved_meal_id):
+    saved_meal = SavedMeal.query.filter_by(id=saved_meal_id, user_id=current_user.id).first()
+    if not saved_meal:
+        return jsonify({"error": "not found"}), 404
+
+    data = request.get_json(force=True) or {}
+    selected_date = _parse_iso_date(data.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    meal = MealEntry(
+        user_id=current_user.id,
+        date=selected_date,
+        meal_name=(data.get("meal_name") or saved_meal.default_meal_name or "Meal").strip(),
+        food_name=saved_meal.food_name,
+        serving_size=saved_meal.serving_size,
+        calories=saved_meal.calories,
+        protein_g=saved_meal.protein_g,
+        carbs_g=saved_meal.carbs_g,
+        fats_g=saved_meal.fats_g,
+        fiber_g=saved_meal.fiber_g,
+        notes=saved_meal.notes,
+    )
+    db.session.add(meal)
+    db.session.commit()
+    return jsonify({"ok": True, "meal": _serialize_meal(meal)}), 201
+
+
+@main_bp.route("/api/nutrition/saved-meals/<int:saved_meal_id>", methods=["DELETE"])
+@login_required
+def delete_saved_meal(saved_meal_id):
+    saved_meal = SavedMeal.query.filter_by(id=saved_meal_id, user_id=current_user.id).first()
+    if not saved_meal:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(saved_meal)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@main_bp.route("/api/nutrition/body-metrics", methods=["GET"])
+@login_required
+def list_body_metrics():
+    rows = (
+        BodyMetric.query
+        .filter_by(user_id=current_user.id)
+        .order_by(BodyMetric.date.desc(), BodyMetric.id.desc())
+        .limit(60)
+        .all()
+    )
+    return jsonify([_serialize_body_metric(row) for row in rows])
+
+
+@main_bp.route("/api/nutrition/body-metrics", methods=["POST"])
+@login_required
+def create_body_metric():
+    data = request.get_json(force=True) or {}
+    selected_date = _parse_iso_date(data.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    weight_lbs_raw = data.get("weight_lbs")
+    if weight_lbs_raw in (None, ""):
+        return jsonify({"error": "Weight is required"}), 400
+
+    metric = BodyMetric(
+        user_id=current_user.id,
+        date=selected_date,
+        weight_lbs=float(weight_lbs_raw),
+        body_fat_pct=float(data.get("body_fat_pct")) if data.get("body_fat_pct") not in (None, "") else None,
+        waist_inches=float(data.get("waist_inches")) if data.get("waist_inches") not in (None, "") else None,
+        notes=(data.get("notes") or "").strip() or None,
+    )
+    db.session.add(metric)
+    db.session.commit()
+    return jsonify({"ok": True, "metric": _serialize_body_metric(metric)}), 201
+
+
+@main_bp.route("/api/nutrition/body-metrics/<int:metric_id>", methods=["DELETE"])
+@login_required
+def delete_body_metric(metric_id):
+    metric = BodyMetric.query.filter_by(id=metric_id, user_id=current_user.id).first()
+    if not metric:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(metric)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@main_bp.route("/api/nutrition/summary", methods=["GET"])
+@login_required
+def nutrition_summary():
+    selected_date = _parse_iso_date(request.args.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+    profile = _get_or_create_nutrition_profile()
+    meals = MealEntry.query.filter_by(user_id=current_user.id, date=selected_date).all()
+    totals = HerculesEngine.summarize_meals(meals)
+    targets = _serialize_profile(profile)
+    balance = {
+        "calories": round(profile.target_calories - totals["calories"], 1),
+        "protein_g": round(profile.target_protein_g - totals["protein_g"], 1),
+        "carbs_g": round(profile.target_carbs_g - totals["carbs_g"], 1),
+        "fats_g": round(profile.target_fats_g - totals["fats_g"], 1),
+        "fiber_g": round(profile.target_fiber_g - totals["fiber_g"], 1),
+    }
+    remaining = {
+        "calories": round(max(balance["calories"], 0), 1),
+        "protein_g": round(max(balance["protein_g"], 0), 1),
+        "carbs_g": round(max(balance["carbs_g"], 0), 1),
+        "fats_g": round(max(balance["fats_g"], 0), 1),
+        "fiber_g": round(max(balance["fiber_g"], 0), 1),
+    }
+    return jsonify({
+        "date": selected_date.isoformat(),
+        "profile": targets,
+        "totals": totals,
+        "balance": balance,
+        "remaining": remaining,
+    })
+
+
+@main_bp.route("/api/nutrition/food-search", methods=["GET"])
+@login_required
+def nutrition_food_search():
+    query = (request.args.get("query") or "").strip()
+    if not query:
+        return jsonify([])
+    foods = OnlineDataFetcher.fetch_food_options(query, max_results=6)
+    return jsonify(foods)
+
+
+@main_bp.route("/api/hercules/nutrition-tip", methods=["POST"])
+@login_required
+def get_nutrition_tip():
+    data = request.get_json(force=True) or {}
+    selected_date = _parse_iso_date(data.get("date"))
+    if selected_date is None:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+    meal_name = (data.get("meal_name") or "Next Meal").strip()
+
+    profile = _get_or_create_nutrition_profile()
+    meals = MealEntry.query.filter_by(user_id=current_user.id, date=selected_date).all()
+    engine = HerculesEngine(current_user.id)
+    tip = engine.generate_nutrition_tip(_serialize_profile(profile), meals, meal_name=meal_name)
+    return jsonify(tip)

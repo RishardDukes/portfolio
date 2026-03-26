@@ -1,0 +1,660 @@
+{% extends 'base.html' %}
+{% block title %}Nutrition | Hercules{% endblock %}
+{% block content %}
+<section class="tracker-header panel">
+  <div>
+    <p class="eyebrow">Nutrition</p>
+    <h1>Track intake with the same structure as training.</h1>
+    <p class="hero-copy">Set calorie and macro targets, log meals for the day, and let Hercules suggest foods that close the gap for your next meal.</p>
+  </div>
+  <div class="tracker-header-actions">
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Dashboard</a>
+    <a href="{{ url_for('main.tracker') }}" class="btn btn-primary" data-spa-nav="true">Open Tracker</a>
+  </div>
+</section>
+
+<section class="nutrition-layout">
+  <div class="nutrition-column nutrition-column-main">
+    <div class="panel nutrition-profile-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="card-label">Calculator</p>
+          <h2>Body stats and targets</h2>
+        </div>
+        <div class="coach-pill">Meals + macros</div>
+      </div>
+
+      <form id="nutrition-profile-form" class="nutrition-form-grid">
+        <div class="form-group">
+          <label for="nutrition-date">Date</label>
+          <input type="date" id="nutrition-date" name="date">
+        </div>
+        <div class="form-group">
+          <label for="sex">Sex</label>
+          <select id="sex" name="sex">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="age">Age</label>
+          <input type="number" id="age" name="age" min="14" max="100">
+        </div>
+        <div class="form-group">
+          <label for="height_inches">Height (inches)</label>
+          <input type="number" id="height_inches" name="height_inches" min="48" step="0.5">
+        </div>
+        <div class="form-group">
+          <label for="weight_lbs">Weight (lbs)</label>
+          <input type="number" id="weight_lbs" name="weight_lbs" min="50" step="0.1">
+        </div>
+        <div class="form-group">
+          <label for="activity_level">Activity</label>
+          <select id="activity_level" name="activity_level">
+            <option value="sedentary">Sedentary</option>
+            <option value="light">Light</option>
+            <option value="moderate">Moderate</option>
+            <option value="active">Active</option>
+            <option value="very_active">Very Active</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="goal_type">Goal</label>
+          <select id="goal_type" name="goal_type">
+            <option value="maintain">Maintain</option>
+            <option value="cut">Cut</option>
+            <option value="bulk">Bulk</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="daily_calorie_adjustment">Daily calorie adjustment</label>
+          <input type="number" id="daily_calorie_adjustment" name="daily_calorie_adjustment" step="10" placeholder="-300 for deficit, +250 for surplus">
+        </div>
+        <div class="form-group">
+          <label for="meals_per_day">Meals per day</label>
+          <input type="number" id="meals_per_day" name="meals_per_day" min="1" max="8">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Save Targets</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel nutrition-log-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="card-label">Meal log</p>
+          <h2>Add food intake</h2>
+        </div>
+      </div>
+      <div class="saved-meal-toolbar">
+        <input type="text" id="saved-meal-name" placeholder="Name this meal template (optional)">
+        <button class="btn btn-secondary" type="button" onclick="saveCurrentMealTemplate()">Save current meal</button>
+      </div>
+      <div id="saved-meals-list" class="saved-meals-list"></div>
+      <form id="meal-form" class="nutrition-form-grid">
+        <div class="form-group">
+          <label for="meal_name">Meal</label>
+          <select id="meal_name" name="meal_name">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Dinner">Dinner</option>
+            <option value="Snack">Snack</option>
+            <option value="Post-workout">Post-workout</option>
+          </select>
+        </div>
+        <div class="form-group form-group-wide">
+          <label for="food_name">Food item</label>
+          <input type="text" id="food_name" name="food_name" placeholder="Chicken breast, oats, greek yogurt...">
+        </div>
+        <div class="form-group">
+          <label for="serving_size">Serving</label>
+          <input type="text" id="serving_size" name="serving_size" placeholder="6 oz, 1 cup">
+        </div>
+        <div class="form-group">
+          <label for="meal_calories">Calories</label>
+          <input type="number" id="meal_calories" name="calories" min="0" step="1">
+        </div>
+        <div class="form-group">
+          <label for="protein_g">Protein (g)</label>
+          <input type="number" id="protein_g" name="protein_g" min="0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label for="carbs_g">Carbs (g)</label>
+          <input type="number" id="carbs_g" name="carbs_g" min="0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label for="fats_g">Fats (g)</label>
+          <input type="number" id="fats_g" name="fats_g" min="0" step="0.1">
+        </div>
+        <div class="form-group">
+          <label for="fiber_g">Fiber (g)</label>
+          <input type="number" id="fiber_g" name="fiber_g" min="0" step="0.1">
+        </div>
+        <div class="form-group form-group-full">
+          <label for="meal_notes">Notes</label>
+          <textarea id="meal_notes" name="notes" rows="3" placeholder="Optional: appetite, digestion, timing, or prep notes."></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Log Meal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="nutrition-column nutrition-column-side">
+    <div class="panel nutrition-coach-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="card-label">Hercules Coach</p>
+          <h2>Meal guidance</h2>
+        </div>
+      </div>
+      <div id="nutrition-coach-output" class="nutrition-coach-output">Set your targets and log meals, then ask Hercules what the next meal should cover.</div>
+      <div class="nutrition-coach-controls">
+        <select id="coach-meal-name">
+          <option value="Breakfast">Breakfast</option>
+          <option value="Lunch">Lunch</option>
+          <option value="Dinner">Dinner</option>
+          <option value="Snack">Snack</option>
+          <option value="Post-workout">Post-workout</option>
+        </select>
+        <button class="btn btn-primary" type="button" onclick="getNutritionTip()">Get Nutrition Tip</button>
+      </div>
+    </div>
+
+    <section class="nutrition-summary-grid">
+      <article class="summary-card panel">
+        <p class="summary-label">Target Calories</p>
+        <h3 id="target-calories">0</h3>
+        <span class="summary-meta">Daily energy target</span>
+      </article>
+      <article class="summary-card panel">
+        <p class="summary-label">Consumed</p>
+        <h3 id="consumed-calories">0</h3>
+        <span class="summary-meta">Calories logged today</span>
+      </article>
+      <article class="summary-card panel">
+        <p class="summary-label">Remaining</p>
+        <h3 id="remaining-calories">0</h3>
+        <span class="summary-meta" id="remaining-label">Calories left today</span>
+      </article>
+      <article class="summary-card panel">
+        <p class="summary-label">TDEE</p>
+        <h3 id="tdee-display">0</h3>
+        <span class="summary-meta">Maintenance estimate</span>
+      </article>
+    </section>
+    <div class="panel nutrition-search-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="card-label">Food search</p>
+          <h2>Look up real foods</h2>
+        </div>
+        <div class="subdued-text">OpenFoodFacts</div>
+      </div>
+      <div class="nutrition-search-bar">
+        <input type="text" id="food-search-query" placeholder="Search foods for this meal...">
+        <button class="btn btn-secondary" type="button" onclick="searchFoods()">Search</button>
+      </div>
+      <div id="food-search-results" class="food-search-results"></div>
+    </div>
+  </div>
+</section>
+
+<section class="panel nutrition-history-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="card-label">Daily intake</p>
+      <h2>Logged meals</h2>
+    </div>
+    <div id="macro-progress" class="subdued-text">Protein 0 / Carbs 0 / Fats 0 / Fiber 0</div>
+  </div>
+  <div id="meal-list" class="meal-list"></div>
+</section>
+
+<section class="panel body-metrics-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="card-label">Body metrics</p>
+      <h2>Timeline and check-ins</h2>
+    </div>
+    <div id="body-metric-summary" class="subdued-text">No check-ins yet</div>
+  </div>
+  <form id="body-metric-form" class="body-metric-form">
+    <div class="form-group">
+      <label for="metric_date">Date</label>
+      <input type="date" id="metric_date" name="date">
+    </div>
+    <div class="form-group">
+      <label for="metric_weight_lbs">Weight (lbs)</label>
+      <input type="number" id="metric_weight_lbs" name="weight_lbs" step="0.1" min="50" required>
+    </div>
+    <div class="form-group">
+      <label for="metric_body_fat_pct">Body fat (%)</label>
+      <input type="number" id="metric_body_fat_pct" name="body_fat_pct" step="0.1" min="0" max="80">
+    </div>
+    <div class="form-group">
+      <label for="metric_waist_inches">Waist (inches)</label>
+      <input type="number" id="metric_waist_inches" name="waist_inches" step="0.1" min="10">
+    </div>
+    <div class="form-group form-group-full">
+      <label for="metric_notes">Notes</label>
+      <input type="text" id="metric_notes" name="notes" placeholder="Optional weekly notes">
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">Log Check-in</button>
+    </div>
+  </form>
+  <div id="body-metric-list" class="body-metric-list"></div>
+</section>
+
+<script>
+const nutritionDateInput = document.getElementById('nutrition-date');
+const profileForm = document.getElementById('nutrition-profile-form');
+const mealForm = document.getElementById('meal-form');
+const mealList = document.getElementById('meal-list');
+const savedMealNameInput = document.getElementById('saved-meal-name');
+const savedMealsList = document.getElementById('saved-meals-list');
+const bodyMetricForm = document.getElementById('body-metric-form');
+const bodyMetricList = document.getElementById('body-metric-list');
+const bodyMetricSummary = document.getElementById('body-metric-summary');
+const today = new Date().toISOString().split('T')[0];
+let profileData = null;
+let summaryData = null;
+let mealsData = [];
+let savedMealsData = [];
+let bodyMetricsData = [];
+
+nutritionDateInput.value = today;
+document.getElementById('metric_date').value = today;
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function formatDate(value) {
+  const parsed = new Date(`${value}T00:00:00`);
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function roundMacro(value) {
+  return Math.round(Number(value || 0));
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function fetchNutritionProfile() {
+  const res = await fetch('/api/nutrition/profile');
+  if (!res.ok) return;
+  profileData = await res.json();
+  for (const [key, value] of Object.entries(profileData)) {
+    const field = document.getElementById(key);
+    if (field) field.value = value;
+  }
+  updateSummaryCards();
+}
+
+async function fetchMealsAndSummary() {
+  const date = nutritionDateInput.value || today;
+  const [mealsRes, summaryRes] = await Promise.all([
+    fetch(`/api/nutrition/meals?date=${date}`),
+    fetch(`/api/nutrition/summary?date=${date}`),
+  ]);
+  if (mealsRes.ok) {
+    mealsData = await mealsRes.json();
+    renderMeals();
+  }
+  if (summaryRes.ok) {
+    summaryData = await summaryRes.json();
+    updateSummaryCards();
+  }
+}
+
+function updateSummaryCards() {
+  const targetCalories = summaryData?.profile?.target_calories || profileData?.target_calories || 0;
+  const consumedCalories = summaryData?.totals?.calories || 0;
+  const calorieBalance = summaryData?.balance?.calories ?? (targetCalories - consumedCalories);
+  const tdee = summaryData?.profile?.tdee || profileData?.tdee || 0;
+  document.getElementById('target-calories').textContent = formatNumber(targetCalories);
+  document.getElementById('consumed-calories').textContent = formatNumber(consumedCalories);
+  document.getElementById('remaining-calories').textContent = formatNumber(Math.abs(calorieBalance));
+  document.getElementById('remaining-label').textContent = calorieBalance >= 0 ? 'Calories left today' : 'Calories over target';
+  document.getElementById('tdee-display').textContent = formatNumber(tdee);
+
+  const protein = summaryData?.totals?.protein_g || 0;
+  const carbs = summaryData?.totals?.carbs_g || 0;
+  const fats = summaryData?.totals?.fats_g || 0;
+  const fiber = summaryData?.totals?.fiber_g || 0;
+  const proteinTarget = summaryData?.profile?.target_protein_g || profileData?.target_protein_g || 0;
+  const carbsTarget = summaryData?.profile?.target_carbs_g || profileData?.target_carbs_g || 0;
+  const fatsTarget = summaryData?.profile?.target_fats_g || profileData?.target_fats_g || 0;
+  const fiberTarget = summaryData?.profile?.target_fiber_g || profileData?.target_fiber_g || 0;
+  document.getElementById('macro-progress').textContent =
+    `Protein ${Math.round(protein)} / ${Math.round(proteinTarget)} • Carbs ${Math.round(carbs)} / ${Math.round(carbsTarget)} • Fats ${Math.round(fats)} / ${Math.round(fatsTarget)} • Fiber ${Math.round(fiber)} / ${Math.round(fiberTarget)}`;
+}
+
+function renderMeals() {
+  if (!mealsData.length) {
+    mealList.innerHTML = '<div class="empty-state"><h3>No meals logged yet</h3><p>Log your first meal for this date and Hercules will start giving food-specific guidance.</p></div>';
+    return;
+  }
+  mealList.innerHTML = mealsData.map(meal => `
+    <article class="meal-card">
+      <div class="meal-card-top">
+        <div>
+          <div class="workout-ex">${escapeHtml(meal.food_name)}</div>
+          <div class="workout-date">${escapeHtml(meal.meal_name)}${meal.serving_size ? ` • ${escapeHtml(meal.serving_size)}` : ''}</div>
+        </div>
+        <button class="icon-btn" type="button" onclick="deleteMeal(${meal.id})">Delete</button>
+      </div>
+      <div class="workout-metrics">
+        <span>${Math.round(meal.calories)} kcal</span>
+        <span>${Math.round(meal.protein_g)}g protein</span>
+        <span>${Math.round(meal.carbs_g)}g carbs</span>
+        <span>${Math.round(meal.fats_g)}g fats</span>
+        <span>${Math.round(meal.fiber_g || 0)}g fiber</span>
+      </div>
+      <div class="workout-notes">${meal.notes ? escapeHtml(meal.notes) : 'No notes for this meal.'}</div>
+    </article>
+  `).join('');
+}
+
+profileForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(profileForm));
+  const res = await fetch('/api/nutrition/profile', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return;
+  profileData = await res.json();
+  await fetchMealsAndSummary();
+});
+
+mealForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(mealForm));
+  payload.date = nutritionDateInput.value || today;
+  const res = await fetch('/api/nutrition/meals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return;
+  mealForm.reset();
+  await fetchMealsAndSummary();
+});
+
+async function deleteMeal(id) {
+  const res = await fetch(`/api/nutrition/meals/${id}`, { method: 'DELETE' });
+  if (res.ok) fetchMealsAndSummary();
+}
+window.deleteMeal = deleteMeal;
+
+function renderSavedMeals() {
+  if (!savedMealsData.length) {
+    savedMealsList.innerHTML = '<div class="subdued-text">No saved meals yet. Save common meals for one-click repeat logging.</div>';
+    return;
+  }
+
+  savedMealsList.innerHTML = savedMealsData.map(savedMeal => `
+    <article class="saved-meal-card">
+      <div class="saved-meal-top">
+        <div>
+          <div class="workout-ex">${escapeHtml(savedMeal.name)}</div>
+          <div class="workout-date">${escapeHtml(savedMeal.food_name)}${savedMeal.serving_size ? ` • ${escapeHtml(savedMeal.serving_size)}` : ''}</div>
+        </div>
+        <button class="icon-btn" type="button" onclick="deleteSavedMeal(${savedMeal.id})">Delete</button>
+      </div>
+      <div class="workout-metrics">
+        <span>${Math.round(savedMeal.calories)} kcal</span>
+        <span>${Math.round(savedMeal.protein_g)}P</span>
+        <span>${Math.round(savedMeal.carbs_g)}C</span>
+        <span>${Math.round(savedMeal.fats_g)}F</span>
+      </div>
+      <div class="saved-meal-actions">
+        <button class="btn btn-primary" type="button" onclick="quickLogSavedMeal(${savedMeal.id})">Log for selected date</button>
+        <button class="btn btn-secondary" type="button" onclick="loadSavedMealIntoForm(${savedMeal.id})">Load into form</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+async function fetchSavedMeals() {
+  const res = await fetch('/api/nutrition/saved-meals');
+  if (!res.ok) return;
+  savedMealsData = await res.json();
+  renderSavedMeals();
+}
+
+async function saveCurrentMealTemplate() {
+  const payload = Object.fromEntries(new FormData(mealForm));
+  if (!payload.food_name || !payload.food_name.trim()) {
+    return;
+  }
+  payload.name = (savedMealNameInput.value || '').trim();
+  payload.default_meal_name = payload.meal_name || 'Meal';
+
+  const res = await fetch('/api/nutrition/saved-meals', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return;
+  savedMealNameInput.value = '';
+  await fetchSavedMeals();
+}
+window.saveCurrentMealTemplate = saveCurrentMealTemplate;
+
+async function quickLogSavedMeal(savedMealId) {
+  const match = savedMealsData.find(item => item.id === savedMealId);
+  const mealName = document.getElementById('meal_name').value || match?.default_meal_name || 'Meal';
+  const res = await fetch(`/api/nutrition/saved-meals/${savedMealId}/log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: nutritionDateInput.value || today,
+      meal_name: mealName,
+    }),
+  });
+  if (!res.ok) return;
+  await fetchMealsAndSummary();
+}
+window.quickLogSavedMeal = quickLogSavedMeal;
+
+function loadSavedMealIntoForm(savedMealId) {
+  const match = savedMealsData.find(item => item.id === savedMealId);
+  if (!match) return;
+  applyFoodSuggestion({
+    name: match.food_name,
+    calories: match.calories,
+    protein_g: match.protein_g,
+    carbs_g: match.carbs_g,
+    fats_g: match.fats_g,
+    fiber_g: match.fiber_g,
+  });
+  if (match.serving_size) {
+    document.getElementById('serving_size').value = match.serving_size;
+  }
+}
+window.loadSavedMealIntoForm = loadSavedMealIntoForm;
+
+async function deleteSavedMeal(savedMealId) {
+  const res = await fetch(`/api/nutrition/saved-meals/${savedMealId}`, { method: 'DELETE' });
+  if (!res.ok) return;
+  await fetchSavedMeals();
+}
+window.deleteSavedMeal = deleteSavedMeal;
+
+function renderBodyMetrics() {
+  if (!bodyMetricsData.length) {
+    bodyMetricSummary.textContent = 'No check-ins yet';
+    bodyMetricList.innerHTML = '<div class="subdued-text">Log body metrics to see trend snapshots over time.</div>';
+    return;
+  }
+
+  const latest = bodyMetricsData[0];
+  const oldest = bodyMetricsData[bodyMetricsData.length - 1];
+  const weightDelta = Number(latest.weight_lbs || 0) - Number(oldest.weight_lbs || 0);
+  bodyMetricSummary.textContent = `${latest.weight_lbs.toFixed(1)} lbs latest • ${weightDelta > 0 ? '+' : ''}${weightDelta.toFixed(1)} lbs vs earliest shown`;
+
+  bodyMetricList.innerHTML = bodyMetricsData.map(metric => `
+    <article class="body-metric-card">
+      <div class="meal-card-top">
+        <div>
+          <div class="workout-ex">${formatDate(metric.date)}</div>
+          <div class="workout-date">${Number(metric.weight_lbs || 0).toFixed(1)} lbs</div>
+        </div>
+        <button class="icon-btn" type="button" onclick="deleteBodyMetric(${metric.id})">Delete</button>
+      </div>
+      <div class="workout-metrics">
+        <span>${metric.body_fat_pct != null ? Number(metric.body_fat_pct).toFixed(1) + '% body fat' : 'Body fat n/a'}</span>
+        <span>${metric.waist_inches != null ? Number(metric.waist_inches).toFixed(1) + ' in waist' : 'Waist n/a'}</span>
+      </div>
+      <div class="workout-notes">${metric.notes ? escapeHtml(metric.notes) : 'No notes for this check-in.'}</div>
+    </article>
+  `).join('');
+}
+
+async function fetchBodyMetrics() {
+  const res = await fetch('/api/nutrition/body-metrics');
+  if (!res.ok) return;
+  bodyMetricsData = await res.json();
+  renderBodyMetrics();
+}
+
+bodyMetricForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(bodyMetricForm));
+  const res = await fetch('/api/nutrition/body-metrics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return;
+  bodyMetricForm.reset();
+  document.getElementById('metric_date').value = today;
+  await fetchBodyMetrics();
+});
+
+async function deleteBodyMetric(metricId) {
+  const res = await fetch(`/api/nutrition/body-metrics/${metricId}`, { method: 'DELETE' });
+  if (!res.ok) return;
+  await fetchBodyMetrics();
+}
+window.deleteBodyMetric = deleteBodyMetric;
+
+nutritionDateInput.addEventListener('change', fetchMealsAndSummary);
+
+async function searchFoods() {
+  const query = document.getElementById('food-search-query').value.trim();
+  const results = document.getElementById('food-search-results');
+  if (!query) {
+    results.innerHTML = '';
+    return;
+  }
+  results.innerHTML = '<div class="subdued-text">Searching foods...</div>';
+  const res = await fetch(`/api/nutrition/food-search?query=${encodeURIComponent(query)}`);
+  if (!res.ok) {
+    results.innerHTML = '<div class="subdued-text">Food search unavailable right now.</div>';
+    return;
+  }
+  const foods = await res.json();
+  if (!foods.length) {
+    results.innerHTML = '<div class="subdued-text">No food matches found right now. OpenFoodFacts may also be temporarily unavailable.</div>';
+    return;
+  }
+  results.innerHTML = foods.map(food => `
+    <article class="food-result-card">
+      <div>
+        <h3>${escapeHtml(food.name)}</h3>
+        <p>${food.brand ? escapeHtml(food.brand) + ' • ' : ''}${Math.round(food.calories || 0)} kcal per 100g</p>
+        <div class="workout-metrics">
+          <span>${Math.round(food.protein_g || 0)}g protein</span>
+          <span>${Math.round(food.carbs_g || 0)}g carbs</span>
+          <span>${Math.round(food.fats_g || 0)}g fats</span>
+          <span>${Math.round(food.fiber_g || 0)}g fiber</span>
+        </div>
+      </div>
+      <div class="food-result-actions">
+        ${food.url ? `<a class="btn btn-secondary" href="${food.url}" target="_blank" rel="noreferrer">View source</a>` : ''}
+      </div>
+    </article>
+  `).join('');
+
+  const cards = results.querySelectorAll('.food-result-card');
+  foods.forEach((food, index) => {
+    const button = document.createElement('button');
+    button.className = 'btn btn-primary';
+    button.type = 'button';
+    button.textContent = 'Use values';
+    button.onclick = () => applyFoodSuggestion(food);
+    cards[index].querySelector('.food-result-actions').appendChild(button);
+  });
+}
+window.searchFoods = searchFoods;
+
+function applyFoodSuggestion(food) {
+  document.getElementById('food_name').value = food.name || '';
+  document.getElementById('serving_size').value = '100g';
+  document.getElementById('meal_calories').value = Math.round(food.calories || 0);
+  document.getElementById('protein_g').value = food.protein_g || 0;
+  document.getElementById('carbs_g').value = food.carbs_g || 0;
+  document.getElementById('fats_g').value = food.fats_g || 0;
+  document.getElementById('fiber_g').value = food.fiber_g || 0;
+  document.getElementById('meal-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+window.applyFoodSuggestion = applyFoodSuggestion;
+
+async function getNutritionTip() {
+  const output = document.getElementById('nutrition-coach-output');
+  output.innerHTML = 'Checking today\'s intake and building a meal suggestion...';
+  const res = await fetch('/api/hercules/nutrition-tip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      date: nutritionDateInput.value || today,
+      meal_name: document.getElementById('coach-meal-name').value,
+    }),
+  });
+  if (!res.ok) {
+    output.textContent = 'Unable to generate a nutrition tip right now.';
+    return;
+  }
+  const data = await res.json();
+  const foods = Array.isArray(data.food_options) ? data.food_options.slice(0, 3) : [];
+  output.innerHTML = `
+    <div class="nutrition-tip-category">${escapeHtml(data.category)}</div>
+    <div class="nutrition-tip-copy">${escapeHtml(data.tip)}</div>
+    <div class="nutrition-tip-reason">${escapeHtml(data.reasoning)}</div>
+    <div class="nutrition-tip-meta">Remaining today: ${roundMacro(data.remaining.calories)} kcal • ${roundMacro(data.remaining.protein_g)}g protein • ${roundMacro(data.remaining.carbs_g)}g carbs • ${roundMacro(data.remaining.fats_g)}g fats</div>
+    ${foods.length ? '<div class="nutrition-food-suggestions"></div>' : '<div class="nutrition-tip-meta">Live food suggestions are unavailable at the moment, but the macro targets above are still based on your current intake.</div>'}
+  `;
+
+  if (foods.length) {
+    const suggestionShelf = output.querySelector('.nutrition-food-suggestions');
+    foods.forEach(food => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'plan-chip';
+      button.textContent = `${food.name} • ${roundMacro(food.protein_g)}P / ${roundMacro(food.carbs_g)}C / ${roundMacro(food.fats_g)}F`;
+      button.onclick = () => applyFoodSuggestion(food);
+      suggestionShelf.appendChild(button);
+    });
+  }
+}
+window.getNutritionTip = getNutritionTip;
+
+fetchNutritionProfile().then(fetchMealsAndSummary);
+fetchSavedMeals();
+fetchBodyMetrics();
+</script>
+{% endblock %}

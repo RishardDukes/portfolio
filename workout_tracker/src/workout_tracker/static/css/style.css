@@ -554,6 +554,70 @@ label {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.performance-panel {
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.performance-cards,
+.saved-meals-list,
+.body-metric-list {
+  display: grid;
+  gap: 12px;
+}
+
+.performance-cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.performance-card,
+.saved-meal-card,
+.body-metric-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.performance-card-top,
+.saved-meal-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.performance-card h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.saved-meal-toolbar,
+.saved-meal-actions,
+.body-metric-form {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-meal-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.saved-meal-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.body-metrics-panel {
+  padding: 24px;
+}
+
+.body-metric-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
 .analytics-panel {
   min-height: 360px;
 }
@@ -565,6 +629,7 @@ label {
 @media (max-width: 1050px) {
   .dashboard-grid,
   .tracker-summary-grid,
+  .performance-cards,
   .analytics-grid,
   .tracker-main-grid,
   .auth-layout,
@@ -574,6 +639,10 @@ label {
   }
 
   .workout-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .body-metric-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -621,6 +690,12 @@ label {
   }
 
   .workout-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-meal-toolbar,
+  .saved-meal-actions,
+  .body-metric-form {
     grid-template-columns: 1fr;
   }
 
@@ -858,4 +933,166 @@ label {
 .plan-empty-text {
   color: var(--muted-2);
   font-size: 0.9rem;
+}
+
+/* ─── Nutrition Page ───────────────────────────────────── */
+
+.nutrition-layout,
+.nutrition-summary-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.nutrition-layout {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  align-items: start;
+}
+
+.nutrition-column {
+  display: grid;
+  gap: 18px;
+}
+
+.nutrition-profile-panel,
+.nutrition-coach-panel,
+.nutrition-log-panel,
+.nutrition-search-panel,
+.nutrition-history-panel {
+  padding: 24px;
+}
+
+.nutrition-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.nutrition-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nutrition-coach-output {
+  min-height: 170px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  color: var(--muted-2);
+}
+
+.nutrition-coach-controls,
+.nutrition-search-bar,
+.food-result-actions,
+.nutrition-food-suggestions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nutrition-coach-controls,
+.nutrition-search-bar {
+  margin-top: 16px;
+}
+
+.nutrition-search-bar input {
+  flex: 1;
+}
+
+.food-search-results,
+.meal-list {
+  display: grid;
+  gap: 14px;
+}
+
+.food-result-card,
+.meal-card {
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.food-result-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+
+.food-result-card p {
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.food-result-actions {
+  margin-top: 14px;
+}
+
+.meal-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.nutrition-tip-category {
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.22);
+  color: #baf7d1;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nutrition-tip-copy {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+
+.nutrition-tip-reason,
+.nutrition-tip-meta {
+  color: var(--muted);
+}
+
+.nutrition-tip-meta {
+  margin-top: 12px;
+}
+
+.nutrition-food-suggestions {
+  margin-top: 16px;
+}
+
+@media (max-width: 1050px) {
+  .nutrition-layout,
+  .nutrition-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .nutrition-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .nutrition-profile-panel,
+  .nutrition-coach-panel,
+  .nutrition-log-panel,
+  .nutrition-search-panel,
+  .nutrition-history-panel {
+    padding: 20px;
+  }
+
+  .nutrition-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
