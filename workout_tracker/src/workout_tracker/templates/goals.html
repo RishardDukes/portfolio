@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block title %}Goals | Hercules{% endblock %}
+{% block content %}
+<section class="tracker-header panel">
+  <div>
+    <p class="eyebrow">Goals</p>
+    <h1>Set targets. Smash them.</h1>
+    <p class="hero-copy">Define lift targets or body-weight goals. Hercules tracks your progress and reminds you in the coaching feed when you're close.</p>
+  </div>
+  <div class="tracker-header-actions">
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Dashboard</a>
+    <a href="{{ url_for('main.tracker') }}" class="btn btn-primary" data-spa-nav="true">Open Tracker</a>
+  </div>
+</section>
+
+<section class="goals-layout">
+
+  <!-- ── Add goal form ────────────────────────────────────────────────────── -->
+  <div class="panel goals-form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">New Goal</p>
+        <h2>Add a target</h2>
+      </div>
+    </div>
+    <form id="goal-form" class="goals-form-grid">
+      <div class="form-group">
+        <label for="goal-type">Type</label>
+        <select id="goal-type" name="goal_type">
+          <option value="lift">Lift (exercise weight)</option>
+          <option value="bodyweight">Body weight</option>
+        </select>
+      </div>
+      <div class="form-group" id="exercise-group">
+        <label for="goal-exercise">Exercise</label>
+        <select id="goal-exercise" name="exercise">
+          <option value="">Select exercise…</option>
+          <option>Bench Press</option>
+          <option>Squat</option>
+          <option>Deadlift</option>
+          <option>Overhead Press</option>
+          <option>Barbell Row</option>
+          <option>Pull Up</option>
+          <option>Incline Dumbbell Press</option>
+          <option>Leg Press</option>
+          <option>Dips</option>
+          <option>Lat Pulldown</option>
+          <option>Bicep Curl</option>
+          <option>Triceps Extension</option>
+          <option>Lunge</option>
+          <option>Face Pull</option>
+          <option>Lateral Raise</option>
+          <option>Calf Raise</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="goal-target" id="goal-target-label">Target weight (lbs)</label>
+        <input type="number" id="goal-target" name="target_weight" step="2.5" min="1" required placeholder="e.g. 225">
+      </div>
+      <div class="form-group">
+        <label for="goal-date">Target date <span class="optional-label">(optional)</span></label>
+        <input type="date" id="goal-date" name="target_date">
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1">
+        <label for="goal-note">Note <span class="optional-label">(optional)</span></label>
+        <input type="text" id="goal-note" name="note" maxlength="200" placeholder="e.g. competition prep, first bodyweight pull-up">
+      </div>
+      <div class="form-actions" style="grid-column: 1 / -1">
+        <button class="btn btn-primary" type="submit">Add Goal</button>
+        <span id="goal-save-msg" class="save-msg" aria-live="polite"></span>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Active goals ─────────────────────────────────────────────────────── -->
+  <div class="panel goals-list-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">Active</p>
+        <h2>Your goals</h2>
+      </div>
+      <label class="goals-filter-label">
+        <input type="checkbox" id="show-achieved"> Show achieved
+      </label>
+    </div>
+    <div id="goals-list">
+      <p class="muted-hint">Loading…</p>
+    </div>
+  </div>
+
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  let _goals = [];
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.getElementById('goal-type').addEventListener('change', onTypeChange);
+  document.getElementById('goal-form').addEventListener('submit', saveGoal);
+  document.getElementById('show-achieved').addEventListener('change', renderGoals);
+
+  loadGoals();
+
+  function onTypeChange() {
+    const isBW = document.getElementById('goal-type').value === 'bodyweight';
+    document.getElementById('exercise-group').style.display = isBW ? 'none' : '';
+    document.getElementById('goal-target-label').textContent =
+      isBW ? 'Target weight (lbs)' : 'Target weight (lbs)';
+  }
+
+  // ── API ────────────────────────────────────────────────────────────────────
+  async function loadGoals() {
+    try {
+      const res = await fetch('/api/goals');
+      if (!res.ok) throw new Error(res.statusText);
+      _goals = await res.json();
+    } catch (e) {
+      document.getElementById('goals-list').innerHTML =
+        '<p class="muted-hint">Could not load goals. ' + e.message + '</p>';
+      return;
+    }
+    renderGoals();
+  }
+
+  async function saveGoal(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+      goal_type: fd.get('goal_type'),
+      exercise: fd.get('exercise') || undefined,
+      target_weight: parseFloat(fd.get('target_weight')),
+      target_date: fd.get('target_date') || undefined,
+      note: fd.get('note') || undefined,
+    };
+    const msg = document.getElementById('goal-save-msg');
+    try {
+      const res = await fetch('/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || res.statusText);
+      }
+      msg.textContent = '✓ Goal added';
+      msg.style.color = 'var(--primary)';
+      e.target.reset();
+      document.getElementById('exercise-group').style.display = '';
+      await loadGoals();
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.style.color = 'var(--danger, #e05252)';
+    }
+    setTimeout(() => { msg.textContent = ''; }, 4000);
+  }
+
+  async function toggleAchieved(id, current) {
+    await fetch(`/api/goals/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ achieved: !current }),
+    });
+    await loadGoals();
+  }
+
+  async function deleteGoal(id) {
+    if (!confirm('Delete this goal?')) return;
+    await fetch(`/api/goals/${id}`, { method: 'DELETE' });
+    await loadGoals();
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderGoals() {
+    const showAchieved = document.getElementById('show-achieved').checked;
+    const list = document.getElementById('goals-list');
+    const visible = _goals.filter(g => showAchieved || !g.achieved);
+
+    if (visible.length === 0) {
+      list.innerHTML = showAchieved
+        ? '<p class="muted-hint">No goals yet. Add one above.</p>'
+        : '<p class="muted-hint">No active goals. Either add one above or check "Show achieved".</p>';
+      return;
+    }
+
+    list.innerHTML = visible.map(g => {
+      const label = g.goal_type === 'lift'
+        ? `${g.exercise || 'Lift'} — ${g.target_weight} lbs`
+        : `Body weight — ${g.target_weight} lbs`;
+      const dateStr = g.target_date ? ` · Due ${g.target_date}` : '';
+      const note = g.note ? `<p class="goal-note">${g.note}</p>` : '';
+      const achieved = g.achieved;
+      return `
+        <div class="goal-card ${achieved ? 'goal-achieved' : ''}">
+          <div class="goal-card-main">
+            <div class="goal-card-title">${label}</div>
+            <div class="goal-card-meta">${g.goal_type === 'lift' ? 'Lift goal' : 'Body weight goal'}${dateStr}</div>
+            ${note}
+          </div>
+          <div class="goal-card-actions">
+            <button class="btn btn-secondary btn-sm"
+              onclick="window._toggleAchieved(${g.id}, ${achieved})">
+              ${achieved ? 'Reopen' : '✓ Done'}
+            </button>
+            <button class="btn-icon-del" onclick="window._deleteGoal(${g.id})" title="Delete goal">✕</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window._toggleAchieved = toggleAchieved;
+  window._deleteGoal = deleteGoal;
+})();
+</script>
+{% endblock %}

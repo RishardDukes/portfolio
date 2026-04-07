@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}History | Hercules{% endblock %}
+{% block content %}
+
+<section class="history-header panel">
+  <div>
+    <p class="eyebrow">Session history</p>
+    <h1>Calendar view</h1>
+    <p class="hero-copy">Browse every training day. Click a date to see the full session.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('main.tracker') }}" class="btn btn-secondary" data-spa-nav="true">Log Workout</a>
+  </div>
+</section>
+
+<div class="history-layout">
+  <!-- Calendar panel -->
+  <div class="panel history-cal-panel">
+    <div class="cal-nav">
+      <button class="btn btn-secondary btn-sm" id="cal-prev" aria-label="Previous month">&#8249;</button>
+      <h2 id="cal-title" class="cal-title">—</h2>
+      <button class="btn btn-secondary btn-sm" id="cal-next" aria-label="Next month">&#8250;</button>
+    </div>
+    <div class="cal-dow-row">
+      <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+      <span>Thu</span><span>Fri</span><span>Sat</span>
+    </div>
+    <div id="cal-grid" class="cal-grid"></div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="panel history-detail-panel">
+    <p class="card-label">Session detail</p>
+    <h2 id="detail-date-heading">Select a date</h2>
+    <div id="detail-content" class="detail-content">
+      <p class="muted-text">Click any highlighted day to see workout details.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const SPLITS_COLOR = { Push: '#4f8ef7', Pull: '#2ecc71', Legs: '#e67e22' };
+
+  let curYear, curMonth;
+  let calData = {};   // date-string -> entries[]
+  let loading  = false;
+
+  const title      = document.getElementById('cal-title');
+  const grid       = document.getElementById('cal-grid');
+  const detailHead = document.getElementById('detail-date-heading');
+  const detailBody = document.getElementById('detail-content');
+
+  function init() {
+    const now = new Date();
+    curYear  = now.getFullYear();
+    curMonth = now.getMonth() + 1;  // 1-based
+    loadMonth(curYear, curMonth);
+  }
+
+  async function loadMonth(year, month) {
+    if (loading) return;
+    loading = true;
+    try {
+      const res = await fetch(`/api/workouts/calendar?year=${year}&month=${month}`);
+      if (!res.ok) throw new Error('api error');
+      calData = await res.json();
+    } catch (e) {
+      calData = {};
+    } finally {
+      loading = false;
+    }
+    renderCalendar(year, month);
+  }
+
+  function renderCalendar(year, month) {
+    title.textContent = `${MONTHS[month - 1]} ${year}`;
+    grid.innerHTML = '';
+
+    const firstDay = new Date(year, month - 1, 1).getDay();  // 0=Sun
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    // empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      grid.insertAdjacentHTML('beforeend', '<div class="cal-cell cal-empty"></div>');
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const entries = calData[dateStr] || [];
+      const hasData = entries.length > 0;
+      const isToday = dateStr === todayStr;
+
+      // Collect unique splits for dot colours
+      const splitSet = [...new Set(entries.map(e => e.split))];
+
+      let dotHtml = '';
+      if (hasData) {
+        dotHtml = '<div class="cal-dots">' +
+          splitSet.map(s => `<span class="cal-dot" style="background:${SPLITS_COLOR[s] || '#94a3b8'}"></span>`).join('') +
+          '</div>';
+      }
+
+      const cell = document.createElement('div');
+      cell.className = `cal-cell${hasData ? ' cal-has-data' : ''}${isToday ? ' cal-today' : ''}`;
+      cell.innerHTML = `<span class="cal-day-num">${d}</span>${dotHtml}`;
+
+      if (hasData) {
+        cell.addEventListener('click', () => showDetail(dateStr, entries));
+        cell.setAttribute('role', 'button');
+        cell.setAttribute('tabindex', '0');
+        cell.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') showDetail(dateStr, entries); });
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function showDetail(dateStr, entries) {
+    // Highlight selected cell
+    grid.querySelectorAll('.cal-selected').forEach(c => c.classList.remove('cal-selected'));
+    grid.querySelectorAll('.cal-cell').forEach(c => {
+      const num = c.querySelector('.cal-day-num');
+      if (num && dateStr.endsWith(`-${num.textContent.padStart(2,'0')}`)) {
+        c.classList.add('cal-selected');
+      }
+    });
+
+    // Format heading
+    const d = new Date(dateStr + 'T12:00:00');
+    detailHead.textContent = d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    // Volume + PR
+    let totalVol = 0, bestWeight = 0;
+    entries.forEach(e => {
+      totalVol  += (e.sets||0) * (e.reps||0) * (e.weight||0);
+      if ((e.weight||0) > bestWeight) bestWeight = e.weight;
+    });
+
+    // Group by exercise
+    const byEx = {};
+    entries.forEach(e => {
+      if (!byEx[e.exercise]) byEx[e.exercise] = [];
+      byEx[e.exercise].push(e);
+    });
+
+    const splitBadge = entries.length ? `<span class="split-badge" style="background:${SPLITS_COLOR[entries[0].split]||'#94a3b8'}">${entries[0].split}</span>` : '';
+
+    let html = `<div class="detail-meta-row">
+        ${splitBadge}
+        <span class="detail-stat">Total volume: <strong>${totalVol.toLocaleString()} lbs</strong></span>
+        <span class="detail-stat">Top weight: <strong>${bestWeight} lbs</strong></span>
+        <span class="detail-stat">${entries.length} sets logged</span>
+      </div>`;
+
+    html += '<div class="detail-ex-list">';
+    for (const [ex, sets] of Object.entries(byEx)) {
+      html += `<div class="detail-ex-card">
+        <div class="detail-ex-name">${ex}</div>
+        <table class="detail-sets-table">
+          <thead><tr><th>#</th><th>Sets</th><th>Reps</th><th>Weight</th></tr></thead>
+          <tbody>`;
+      sets.forEach((s, i) => {
+        html += `<tr><td>${i+1}</td><td>${s.sets}</td><td>${s.reps}</td><td>${s.weight} lbs</td></tr>`;
+        if (s.notes) html += `<tr class="detail-notes-row"><td colspan="4">${s.notes}</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+    html += '</div>';
+    detailBody.innerHTML = html;
+  }
+
+  document.getElementById('cal-prev').addEventListener('click', () => {
+    curMonth--;
+    if (curMonth < 1) { curMonth = 12; curYear--; }
+    clearDetail();
+    loadMonth(curYear, curMonth);
+  });
+
+  document.getElementById('cal-next').addEventListener('click', () => {
+    curMonth++;
+    if (curMonth > 12) { curMonth = 1; curYear++; }
+    clearDetail();
+    loadMonth(curYear, curMonth);
+  });
+
+  function clearDetail() {
+    detailHead.textContent = 'Select a date';
+    detailBody.innerHTML = '<p class="muted-text">Click any highlighted day to see workout details.</p>';
+  }
+
+  init();
+})();
+</script>
+{% endblock %}

@@ -5,7 +5,7 @@
     <div>
         <p class="eyebrow">Overview</p>
         <h1>Welcome back, {{ current_user.display_name or current_user.email }}.</h1>
-        <p class="hero-copy">Log sessions, monitor progress, and keep your training data organized in a cleaner, more professional workspace.</p>
+        <p class="hero-copy">Log sessions, monitor progress, and keep your training data organised in a cleaner, more professional workspace.</p>
         <div class="hero-actions">
             <a class="btn btn-primary" href="{{ url_for('main.tracker') }}" data-spa-nav="true">Open Tracker</a>
             <a class="btn btn-secondary" href="{{ url_for('main.programs') }}" data-spa-nav="true">My Programs</a>
@@ -14,9 +14,28 @@
     </div>
     <div class="hero-side-card">
         <div class="metric-kicker">Hercules Coach</div>
-        <div id="hercules-ai" class="coach-quote">Ready when you are. Need a training cue or consistency reminder?</div>
-        <button class="btn btn-primary btn-block" onclick="herculesTalk()">Get Coaching Tip</button>
+        <div id="hercules-ai" class="coach-quote">
+            <span class="coach-loading">Analysing your training data&hellip;</span>
+        </div>
+        <div class="coach-tip-nav" id="coach-tip-nav" style="display:none">
+            <button class="btn btn-secondary btn-sm" onclick="herculesNav(-1)" aria-label="Previous tip">&#8592;</button>
+            <span id="coach-tip-counter" class="coach-tip-counter">1 / 3</span>
+            <button class="btn btn-secondary btn-sm" onclick="herculesNav(1)" aria-label="Next tip">&#8594;</button>
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="herculesTalk()">Refresh Tips</button>
     </div>
+</section>
+
+<section id="weekly-summary-section" class="panel weekly-summary-panel" style="display:none">
+    <div class="panel-heading">
+        <div>
+            <p class="card-label">Weekly Check-in</p>
+            <h2 id="weekly-headline">Loading&hellip;</h2>
+        </div>
+        <div class="subdued-text" id="weekly-days-since"></div>
+    </div>
+    <p id="weekly-narrative" class="weekly-narrative"></p>
+    <div id="weekly-next-steps" class="weekly-next-steps"></div>
 </section>
 
 <section class="dashboard-grid">
@@ -40,47 +59,105 @@
       <h3>Match food to the plan</h3>
       <p>Set calorie and macro targets, log meals by day, and let Hercules suggest foods that fit the remainder of your intake.</p>
     </article>
+    <article class="info-card panel">
+      <p class="card-label">Body Metrics</p>
+      <h3>Track body composition</h3>
+      <p>Log weight, body fat %, and waist over time. Charts show trends so you can see if the training is working.</p>
+      <a href="{{ url_for('main.metrics') }}" class="btn btn-secondary" style="margin-top:12px" data-spa-nav="true">Open Metrics</a>
+    </article>
+    <article class="info-card panel">
+      <p class="card-label">Data Export</p>
+      <h3>Own your data</h3>
+      <p>Download workouts, body metrics, and nutrition logs as CSV or JSON for use in any spreadsheet or analysis tool.</p>
+      <div class="export-btn-group" style="margin-top:12px">
+        <a href="/api/export/workouts.csv" class="btn btn-secondary btn-sm">Workouts CSV</a>
+        <a href="/api/export/workouts.json" class="btn btn-secondary btn-sm">Workouts JSON</a>
+        <a href="/api/export/metrics.csv" class="btn btn-secondary btn-sm">Metrics CSV</a>
+        <a href="/api/export/nutrition.csv" class="btn btn-secondary btn-sm">Nutrition CSV</a>
+      </div>
+    </article>
 </section>
 
 <script>
-function herculesShowTip(data) {
+let _herculesTops = [];
+let _herculesIdx = 0;
+
+function herculesRenderTip(tip) {
+  if (!tip) return;
   const display = document.getElementById('hercules-ai');
-  if (typeof data === 'string') {
-    display.textContent = data;
-  } else if (data.tip) {
-    let researchHtml = '';
-    if (data.source) {
-      researchHtml = `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-size: 0.9em; color: #666;">
-        <strong>Source:</strong> ${data.source}`;
-      if (data.research_url) {
-        researchHtml += `<br><a href="${data.research_url}" target="_blank" style="color: #4f8cff; text-decoration: none;">📖 Read research →</a>`;
-      }
-      researchHtml += `</div>`;
+  let researchHtml = '';
+  if (tip.source) {
+    researchHtml = `<div class="coach-source">
+      <strong>Source:</strong> ${tip.source}`;
+    if (tip.research_url) {
+      researchHtml += ` &mdash; <a href="${tip.research_url}" target="_blank" rel="noopener">Read research &rarr;</a>`;
     }
-    display.innerHTML = `
-      <div style="margin-bottom: 8px; font-weight: 600; color: #4f8cff;">${data.category}</div>
-      <div>${data.tip}</div>
-      ${data.reasoning ? `<div style="margin-top: 8px; font-size: 0.9em; color: #888; font-style: italic;">${data.reasoning}</div>` : ''}
-      ${researchHtml}
-    `;
-  } else {
-    display.textContent = 'Unable to load coaching tip.';
+    researchHtml += `</div>`;
   }
+  display.innerHTML = `
+    <div class="coach-category">${tip.category}</div>
+    <div class="coach-tip-text">${tip.tip}</div>
+    ${tip.reasoning ? `<div class="coach-reasoning">${tip.reasoning}</div>` : ''}
+    ${researchHtml}
+  `;
 }
-window.herculesShowTip = herculesShowTip;
+
+function herculesNav(direction) {
+  if (!_herculesTops.length) return;
+  _herculesIdx = (_herculesIdx + direction + _herculesTops.length) % _herculesTops.length;
+  herculesRenderTip(_herculesTops[_herculesIdx]);
+  document.getElementById('coach-tip-counter').textContent = `${_herculesIdx + 1} / ${_herculesTops.length}`;
+}
+window.herculesNav = herculesNav;
 
 function herculesTalk() {
-  fetch('/api/hercules/coaching-tip')
-    .then(r => {
-      if (!r.ok) throw new Error('Failed to fetch coaching tip');
-      return r.json();
+  const display = document.getElementById('hercules-ai');
+  display.innerHTML = '<span class="coach-loading">Analysing your training data&hellip;</span>';
+  document.getElementById('coach-tip-nav').style.display = 'none';
+
+  fetch('/api/hercules/coaching-tip', { credentials: 'same-origin' })
+    .then(r => { if (!r.ok) throw new Error('API error'); return r.json(); })
+    .then(data => {
+      const tips = Array.isArray(data) ? data : [data];
+      _herculesTops = tips;
+      _herculesIdx = 0;
+      herculesRenderTip(tips[0]);
+      if (tips.length > 1) {
+        document.getElementById('coach-tip-counter').textContent = `1 / ${tips.length}`;
+        document.getElementById('coach-tip-nav').style.display = 'flex';
+      }
     })
-    .then(data => herculesShowTip(data))
-    .catch(err => {
-      console.error('Error fetching coaching tip:', err);
-      herculesShowTip('Unable to fetch coaching tip at this time.');
+    .catch(() => {
+      display.textContent = 'Could not load coaching tips right now. Try again shortly.';
     });
 }
 window.herculesTalk = herculesTalk;
+
+function loadWeeklySummary() {
+  fetch('/api/hercules/weekly-summary', { credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const section = document.getElementById('weekly-summary-section');
+      document.getElementById('weekly-headline').textContent = data.headline;
+      document.getElementById('weekly-narrative').textContent = data.narrative;
+      if (data.days_since_last !== null && data.days_since_last !== undefined) {
+        document.getElementById('weekly-days-since').textContent =
+          data.days_since_last === 0
+            ? 'Trained today'
+            : `Last session ${data.days_since_last} day${data.days_since_last !== 1 ? 's' : ''} ago`;
+      }
+      const stepsEl = document.getElementById('weekly-next-steps');
+      if (data.next_steps && data.next_steps.length) {
+        stepsEl.innerHTML = '<ul>' + data.next_steps.map(s => `<li>${s}</li>`).join('') + '</ul>';
+      }
+      section.style.display = '';
+    })
+    .catch(() => {});
+}
+
+// Auto-load on page mount
+herculesTalk();
+loadWeeklySummary();
 </script>
 {% endblock %}

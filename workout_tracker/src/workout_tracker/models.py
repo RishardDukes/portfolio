@@ -123,3 +123,18 @@ class BodyMetric(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user = db.relationship("User", backref=db.backref("body_metrics", lazy="dynamic"))
+
+
+class Goal(db.Model):
+    """A target the user wants to hit: target weight on an exercise, or a body-weight goal."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    # "lift" or "bodyweight"
+    goal_type = db.Column(db.String(20), nullable=False, default="lift")
+    exercise = db.Column(db.String(120))          # filled for lift goals
+    target_weight = db.Column(db.Float, nullable=False)
+    target_date = db.Column(db.Date)
+    note = db.Column(db.String(200))
+    achieved = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship("User", backref=db.backref("goals", lazy="dynamic"))

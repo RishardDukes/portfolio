@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% block title %}Body Metrics | Hercules{% endblock %}
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<section class="tracker-header panel">
+  <div>
+    <p class="eyebrow">Body Metrics</p>
+    <h1>Track your body composition over time.</h1>
+    <p class="hero-copy">Log weight, body fat %, and waist measurements. Hercules charts the trends so you can see if the training is working.</p>
+  </div>
+  <div class="tracker-header-actions">
+    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" data-spa-nav="true">Dashboard</a>
+    <a href="{{ url_for('main.nutrition') }}" class="btn btn-primary" data-spa-nav="true">Nutrition</a>
+  </div>
+</section>
+
+<section class="metrics-layout">
+
+  <!-- ── Log form ─────────────────────────────────────────────────────────── -->
+  <div class="panel metrics-form-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">New Entry</p>
+        <h2>Log today's measurements</h2>
+      </div>
+    </div>
+    <form id="metrics-form" class="metrics-form-grid">
+      <div class="form-group">
+        <label for="metric-date">Date</label>
+        <input type="date" id="metric-date" name="date" required>
+      </div>
+      <div class="form-group">
+        <label for="metric-weight">Weight (lbs) <span class="required-star">*</span></label>
+        <input type="number" id="metric-weight" name="weight_lbs" step="0.1" min="50" max="700" required placeholder="e.g. 185.5">
+      </div>
+      <div class="form-group">
+        <label for="metric-bf">Body Fat % <span class="optional-label">(optional)</span></label>
+        <input type="number" id="metric-bf" name="body_fat_pct" step="0.1" min="3" max="60" placeholder="e.g. 18.0">
+      </div>
+      <div class="form-group">
+        <label for="metric-waist">Waist (inches) <span class="optional-label">(optional)</span></label>
+        <input type="number" id="metric-waist" name="waist_inches" step="0.25" min="20" max="80" placeholder="e.g. 34.5">
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1">
+        <label for="metric-notes">Notes <span class="optional-label">(optional)</span></label>
+        <input type="text" id="metric-notes" name="notes" maxlength="200" placeholder="e.g. post-refeed, morning fasted…">
+      </div>
+      <div class="form-actions" style="grid-column: 1 / -1">
+        <button class="btn btn-primary" type="submit">Save Entry</button>
+        <span id="metrics-save-msg" class="save-msg" aria-live="polite"></span>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── Charts ──────────────────────────────────────────────────────────── -->
+  <div class="panel metrics-chart-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">Trends</p>
+        <h2>Weight over time</h2>
+      </div>
+      <div class="metrics-summary" id="metrics-summary"></div>
+    </div>
+    <canvas id="weight-chart" height="180"></canvas>
+  </div>
+
+  <div class="panel metrics-chart-panel" id="bf-chart-panel" style="display:none">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">Trends</p>
+        <h2>Body fat %</h2>
+      </div>
+    </div>
+    <canvas id="bf-chart" height="180"></canvas>
+  </div>
+
+  <!-- ── History table ───────────────────────────────────────────────────── -->
+  <div class="panel metrics-history-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="card-label">History</p>
+        <h2>All entries</h2>
+      </div>
+    </div>
+    <div id="metrics-table-wrap" class="metrics-table-wrap">
+      <p class="muted-hint">Loading…</p>
+    </div>
+  </div>
+
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _metrics = [];
+  let _weightChart = null;
+  let _bfChart = null;
+
+  const CHART_DEFAULTS = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        ticks: { color: '#8899bb', maxTicksLimit: 8 },
+        grid: { color: '#1a2640' },
+      },
+      y: {
+        ticks: { color: '#8899bb' },
+        grid: { color: '#1a2640' },
+      },
+    },
+  };
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  document.getElementById('metric-date').value = new Date().toISOString().slice(0, 10);
+
+  document.getElementById('metrics-form').addEventListener('submit', saveMetric);
+
+  loadMetrics();
+
+  // ── API ────────────────────────────────────────────────────────────────────
+  async function loadMetrics() {
+    try {
+      const res = await fetch('/api/nutrition/body-metrics');
+      if (!res.ok) throw new Error(res.statusText);
+      _metrics = await res.json();
+    } catch (e) {
+      document.getElementById('metrics-table-wrap').innerHTML =
+        '<p class="muted-hint">Could not load metrics. ' + e.message + '</p>';
+      return;
+    }
+    renderAll();
+  }
+
+  async function saveMetric(e) {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = {
+      date: fd.get('date'),
+      weight_lbs: parseFloat(fd.get('weight_lbs')),
+      body_fat_pct: fd.get('body_fat_pct') ? parseFloat(fd.get('body_fat_pct')) : null,
+      waist_inches: fd.get('waist_inches') ? parseFloat(fd.get('waist_inches')) : null,
+      notes: fd.get('notes') || null,
+    };
+    const msg = document.getElementById('metrics-save-msg');
+    try {
+      const res = await fetch('/api/nutrition/body-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || res.statusText);
+      }
+      msg.textContent = '✓ Saved';
+      msg.style.color = 'var(--primary)';
+      // reset optional fields only
+      document.getElementById('metric-bf').value = '';
+      document.getElementById('metric-waist').value = '';
+      document.getElementById('metric-notes').value = '';
+      await loadMetrics();
+    } catch (err) {
+      msg.textContent = err.message;
+      msg.style.color = 'var(--danger, #e05252)';
+    }
+    setTimeout(() => { msg.textContent = ''; }, 4000);
+  }
+
+  async function deleteMetric(id) {
+    if (!confirm('Delete this entry?')) return;
+    await fetch(`/api/nutrition/body-metrics/${id}`, { method: 'DELETE' });
+    await loadMetrics();
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderAll() {
+    renderSummary();
+    renderWeightChart();
+    renderBfChart();
+    renderTable();
+  }
+
+  function renderSummary() {
+    const el = document.getElementById('metrics-summary');
+    if (_metrics.length === 0) { el.textContent = ''; return; }
+    const sorted = [..._metrics].sort((a, b) => a.date.localeCompare(b.date));
+    const latest = sorted[sorted.length - 1];
+    const earliest = sorted[0];
+    const delta = latest.weight_lbs - earliest.weight_lbs;
+    const sign = delta >= 0 ? '+' : '';
+    el.innerHTML =
+      `<span class="metric-badge">Latest: <strong>${latest.weight_lbs} lbs</strong></span>` +
+      (sorted.length > 1
+        ? ` <span class="metric-badge">${sign}${delta.toFixed(1)} lbs total</span>`
+        : '');
+  }
+
+  function renderWeightChart() {
+    const sorted = [..._metrics].sort((a, b) => a.date.localeCompare(b.date));
+    const labels = sorted.map(m => m.date);
+    const data = sorted.map(m => m.weight_lbs);
+
+    if (_weightChart) _weightChart.destroy();
+    const ctx = document.getElementById('weight-chart').getContext('2d');
+    _weightChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: '#4f8ef7',
+          backgroundColor: 'rgba(79,142,247,0.08)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#4f8ef7',
+        }],
+      },
+      options: { ...CHART_DEFAULTS },
+    });
+  }
+
+  function renderBfChart() {
+    const sorted = [..._metrics]
+      .filter(m => m.body_fat_pct != null)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const panel = document.getElementById('bf-chart-panel');
+    if (sorted.length < 2) { panel.style.display = 'none'; return; }
+    panel.style.display = '';
+
+    const labels = sorted.map(m => m.date);
+    const data = sorted.map(m => m.body_fat_pct);
+
+    if (_bfChart) _bfChart.destroy();
+    const ctx = document.getElementById('bf-chart').getContext('2d');
+    _bfChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: '#f7a54f',
+          backgroundColor: 'rgba(247,165,79,0.08)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#f7a54f',
+        }],
+      },
+      options: { ...CHART_DEFAULTS },
+    });
+  }
+
+  function renderTable() {
+    const wrap = document.getElementById('metrics-table-wrap');
+    if (_metrics.length === 0) {
+      wrap.innerHTML = '<p class="muted-hint">No entries yet. Log your first measurement above.</p>';
+      return;
+    }
+    const sorted = [..._metrics].sort((a, b) => b.date.localeCompare(a.date));
+    const rows = sorted.map(m => `
+      <tr>
+        <td>${m.date}</td>
+        <td>${m.weight_lbs}</td>
+        <td>${m.body_fat_pct != null ? m.body_fat_pct + '%' : '—'}</td>
+        <td>${m.waist_inches != null ? m.waist_inches + '"' : '—'}</td>
+        <td class="muted-text">${m.notes || ''}</td>
+        <td>
+          <button class="btn-icon-del" onclick="deleteMetricEntry(${m.id})" title="Delete entry" aria-label="Delete entry">✕</button>
+        </td>
+      </tr>
+    `).join('');
+    wrap.innerHTML = `
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Weight (lbs)</th>
+            <th>Body Fat</th>
+            <th>Waist</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // Expose delete to global so inline onclick works
+  window.deleteMetricEntry = deleteMetric;
+})();
+</script>
+{% endblock %}

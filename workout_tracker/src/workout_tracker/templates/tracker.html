@@ -88,6 +88,7 @@
       <div class="form-group form-group-wide">
         <label for="exercise">Exercise</label>
         <select name="exercise" id="exercise" required></select>
+        <div id="form-cue-display" class="form-cue-hint" style="display:none" role="status" aria-live="polite"></div>
       </div>
       <div class="form-group compact-check">
         <label for="unilateral">Unilateral</label>
@@ -120,9 +121,39 @@
         <button class="btn btn-primary" type="submit">Save Workout</button>
       </div>
     </form>
+
+  <!-- ── Rest Timer floating widget ───────────────────────────────────────── -->
+  <div id="rest-timer-widget" class="rest-timer-widget" style="display:none" aria-live="polite" role="timer">
+    <div class="rest-timer-header">
+      <span class="rest-timer-label">Rest Timer</span>
+      <button class="rest-timer-close" onclick="restTimerDismiss()" aria-label="Close">✕</button>
+    </div>
+    <div class="rest-timer-ring-wrap">
+      <svg class="rest-timer-ring" viewBox="0 0 80 80" aria-hidden="true">
+        <circle class="ring-track" cx="40" cy="40" r="34"/>
+        <circle id="ring-progress" class="ring-progress" cx="40" cy="40" r="34"/>
+      </svg>
+      <div id="rest-timer-display" class="rest-timer-display">2:00</div>
+    </div>
+    <div class="rest-timer-controls">
+      <button class="btn btn-secondary btn-sm" onclick="restTimerAdjust(-30)">-30s</button>
+      <button id="rest-timer-toggle" class="btn btn-primary btn-sm" onclick="restTimerToggle()">Start</button>
+      <button class="btn btn-secondary btn-sm" onclick="restTimerAdjust(30)">+30s</button>
+    </div>
+    <div class="rest-timer-presets">
+      <button class="preset-btn" onclick="restTimerSet(60)">1 min</button>
+      <button class="preset-btn" onclick="restTimerSet(90)">90s</button>
+      <button class="preset-btn" onclick="restTimerSet(120)">2 min</button>
+      <button class="preset-btn" onclick="restTimerSet(180)">3 min</button>
+    </div>
+  </div>
+  <button id="rest-timer-fab" class="rest-timer-fab" onclick="restTimerShow()" title="Start rest timer (press R)" aria-label="Start rest timer">
+    ⏱
+  </button>
   </div>
 
   <div class="panel list-panel">
+    <div id="post-workout-banner" class="post-workout-banner" style="display:none" aria-live="polite"></div>
     <div class="panel-heading">
       <div>
         <p class="card-label">Session history</p>
@@ -181,13 +212,39 @@ function updateExercises() {
     if (daytype.value === 'Pull') opts = pullList;
     if (daytype.value === 'Legs') opts = legsList;
     exercise.innerHTML = opts.map(x => `<option value="${x}">${x}</option>`).join('');
+    fetchFormCue();
 }
 
 function toggleSideSelector() {
     sideGroup.hidden = !unilateral.checked;
 }
 
+const formCueDisplay = document.getElementById('form-cue-display');
+let _formCueController = null;
+
+function fetchFormCue() {
+    const name = exercise.value;
+    if (!name) { formCueDisplay.style.display = 'none'; return; }
+    if (_formCueController) _formCueController.abort();
+    _formCueController = new AbortController();
+    fetch('/api/hercules/form-cue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exercise: name }),
+        signal: _formCueController.signal,
+        credentials: 'same-origin',
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+          if (!data || !data.form_cue) { formCueDisplay.style.display = 'none'; return; }
+          formCueDisplay.textContent = data.form_cue;
+          formCueDisplay.style.display = '';
+      })
+      .catch(() => { formCueDisplay.style.display = 'none'; });
+}
+
 daytype.addEventListener('change', updateExercises);
+exercise.addEventListener('change', fetchFormCue);
 unilateral.addEventListener('change', toggleSideSelector);
 updateExercises();
 toggleSideSelector();
@@ -298,9 +355,29 @@ form.addEventListener('submit', function(e) {
             updateExercises();
             toggleSideSelector();
             fetchWorkouts();
+            fetchPostWorkoutTip();
         }
     });
 });
+
+const postWorkoutBanner = document.getElementById('post-workout-banner');
+
+function fetchPostWorkoutTip() {
+    if (!postWorkoutBanner) return;
+    fetch('/api/hercules/coaching-tip', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(tips => {
+          const tip = Array.isArray(tips) ? tips[0] : tips;
+          if (!tip || !tip.tip) return;
+          postWorkoutBanner.innerHTML = `
+            <span class="coach-category">${tip.category}</span>
+            <span class="post-workout-tip-text">${tip.tip}</span>
+          `;
+          postWorkoutBanner.style.display = 'flex';
+          setTimeout(() => { postWorkoutBanner.style.display = 'none'; }, 12000);
+      })
+      .catch(() => {});
+}
 
 function buildVolumeChart(labels, values) {
   const ctx = document.getElementById('analytics-chart').getContext('2d');
@@ -512,6 +589,8 @@ function loadPlanExercise(ex, dayLabel) {
     exerciseEl.prepend(opt);
   }
   exerciseEl.value = ex.exercise_name;
+  // Quick-start sets the value programmatically, so explicitly refresh cue text.
+  fetchFormCue();
 
   if (ex.target_sets) document.getElementById('sets').value = ex.target_sets;
   if (ex.target_reps) document.getElementById('reps').value = ex.target_reps;
@@ -521,5 +600,138 @@ function loadPlanExercise(ex, dayLabel) {
 
 loadProgramsForPicker();
 fetchWorkouts();
+</script>
+
+<script>
+/* ─── Rest Timer ─────────────────────────────────────────────────────────── */
+(function () {
+  'use strict';
+
+  const CIRCUMFERENCE = 2 * Math.PI * 34; // 2πr, r=34
+  let _total    = 120;   // seconds
+  let _remaining = 120;
+  let _interval  = null;
+  let _running   = false;
+
+  const widget   = document.getElementById('rest-timer-widget');
+  const fab      = document.getElementById('rest-timer-fab');
+  const display  = document.getElementById('rest-timer-display');
+  const toggle   = document.getElementById('rest-timer-toggle');
+  const ring     = document.getElementById('ring-progress');
+
+  ring.style.strokeDasharray  = CIRCUMFERENCE;
+  ring.style.strokeDashoffset = 0;
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  }
+
+  function setRing(remaining, total) {
+    const pct = total > 0 ? remaining / total : 0;
+    ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
+  }
+
+  function tick() {
+    if (_remaining <= 0) {
+      stop();
+      display.textContent = 'Done!';
+      ring.style.strokeDashoffset = CIRCUMFERENCE;
+      try { new Audio('/static/sounds/timer_done.mp3').play().catch(() => {}); } catch(e) {}
+      // Beep fallback using AudioContext
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        osc.start(); osc.stop(ctx.currentTime + 0.5);
+      } catch(e) {}
+      return;
+    }
+    _remaining--;
+    display.textContent = fmt(_remaining);
+    setRing(_remaining, _total);
+  }
+
+  function start() {
+    if (_running) return;
+    if (_remaining <= 0) reset();
+    _running = true;
+    toggle.textContent = 'Pause';
+    _interval = setInterval(tick, 1000);
+  }
+
+  function stop() {
+    clearInterval(_interval);
+    _interval = null;
+    _running = false;
+    toggle.textContent = 'Start';
+  }
+
+  function reset() {
+    stop();
+    _remaining = _total;
+    display.textContent = fmt(_remaining);
+    setRing(_remaining, _total);
+  }
+
+  window.restTimerToggle = function () {
+    _running ? stop() : start();
+  };
+
+  window.restTimerSet = function (seconds) {
+    _total = seconds;
+    _remaining = seconds;
+    stop();
+    display.textContent = fmt(_remaining);
+    setRing(_remaining, _total);
+  };
+
+  window.restTimerAdjust = function (delta) {
+    _total = Math.max(10, _total + delta);
+    _remaining = Math.max(0, _remaining + delta);
+    display.textContent = _remaining > 0 ? fmt(_remaining) : fmt(_total);
+    setRing(_remaining, _total);
+  };
+
+  window.restTimerShow = function () {
+    widget.style.display = '';
+    fab.style.display = 'none';
+  };
+
+  window.restTimerDismiss = function () {
+    stop();
+    widget.style.display = 'none';
+    fab.style.display = '';
+  };
+
+  // Auto-start on Save Workout
+  document.getElementById('workout-form').addEventListener('submit', function () {
+    setTimeout(() => {
+      widget.style.display = '';
+      fab.style.display = 'none';
+      reset();
+      start();
+    }, 400);
+  });
+
+  // Keyboard shortcut: R = show/start timer
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'r' || e.key === 'R') {
+      const tag = document.activeElement.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (widget.style.display === 'none' || !widget.style.display) {
+        window.restTimerShow();
+        start();
+      } else {
+        window.restTimerToggle();
+      }
+    }
+  });
+})();
 </script>
 {% endblock %}

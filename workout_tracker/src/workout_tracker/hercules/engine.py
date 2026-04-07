@@ -276,6 +276,7 @@ class HerculesEngine:
     def __init__(self, user_id: int):
         self.user_id = user_id
         self.workouts: List[Dict[str, Any]] = []
+        self.goals: List[Dict[str, Any]] = []
 
     def load_workouts(self, workouts: List[Any]) -> None:
         """Load and normalize workout data."""
@@ -290,6 +291,21 @@ class HerculesEngine:
                 "volume": (w.sets or 0) * (w.reps or 0) * (w.weight or 0),
             }
             for w in workouts
+        ]
+
+    def load_goals(self, goals: List[Any]) -> None:
+        """Load goal records from the database."""
+        self.goals = [
+            {
+                "id": g.id,
+                "goal_type": g.goal_type,
+                "exercise": g.exercise,
+                "target_weight": g.target_weight,
+                "target_date": g.target_date,
+                "achieved": g.achieved,
+            }
+            for g in goals
+            if not g.achieved
         ]
 
     @staticmethod
@@ -487,166 +503,260 @@ class HerculesEngine:
         
         return ((max(exercise_weights) - min(exercise_weights)) / min(exercise_weights)) * 100
 
-    def generate_coaching_tip(self) -> Dict[str, str]:
-        """Generate a personalized coaching tip based on workout history (uses cached research)."""
-        if not self.workouts:
-            return {
-                "category": "Getting Started",
-                "tip": "Start logging your first workout! Consistency beats perfection every time.",
-                "reasoning": "No data available yet",
-                "source": "Hercules AI"
-            }
+    def generate_coaching_tips(self, max_tips: int = 3) -> List[Dict]:
+        """Generate up to max_tips personalised coaching tips, highest-priority first."""
+        import random
 
-        tips = []
-        
-        # Volume-based tips (research-backed from sports science)
-        volume_by_split = self._get_volume_by_split(7)
-        for split, volume in volume_by_split.items():
-            if split in VOLUME_RECOMMENDATIONS:
-                opt_min = VOLUME_RECOMMENDATIONS[split]["optimal_min"]
-                opt_max = VOLUME_RECOMMENDATIONS[split]["optimal_max"]
-                total_sets = self._calculate_split_sets(split, 7)
-                
-                if total_sets < opt_min:
-                    # Start background fetch for research but don't wait
-                    query = f"{split} training volume hypertrophy"
-                    OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
-                    
-                    # Use cached research if available
-                    research_url = None
-                    if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
-                        research_url = _RESEARCH_CACHE[query][0].get("url")
-                    
-                    tips.append({
-                        "category": "Volume Prescription",
-                        "tip": f"Your {split} split is getting {total_sets} sets/week. Aim for {opt_min}-{opt_max} for optimal growth.",
-                        "reasoning": f"Research suggests {opt_min}-{opt_max} sets per session for hypertrophy without overtraining.",
-                        "source": "Sports Science Research",
-                        "research_url": research_url
-                    })
-                elif total_sets > VOLUME_RECOMMENDATIONS[split]["max_sustainable"]:
-                    tips.append({
-                        "category": "Volume Management",
-                        "tip": f"You're hitting {total_sets} sets/week on {split}. Consider backing off to {opt_max} to avoid fatigue and overuse injuries.",
-                        "reasoning": "Excessive volume increases injury risk with minimal additional gains.",
-                        "source": "Sports Science Research"
-                    })
-        
-        # Consistency tips (research-backed)
-        streak = self._calculate_consistency_streak()
-        if streak >= 7:
-            insights = OnlineDataFetcher.fetch_google_training_insights("Progressive Overload")
-            tips.append({
-                "category": "Consistency",
-                "tip": f"Great work! You've logged {streak} consecutive days. This discipline is the #1 predictor of gains.",
-                "reasoning": "Consistency > intensity. Long-term adherence matters more than any single session.",
-                "source": "Behavioral Science Research"
-            })
-        
-        # Progression tips (uses cached research)
-        top_exercises = self._get_top_exercises(1)
-        if top_exercises:
-            exercise, count = top_exercises[0]
-            progression = self._get_strength_progression(exercise, 30)
-            if progression and progression > 5:
-                # Start background fetch but don't wait
-                query = "progressive overload strength training"
-                OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
-                
-                # Use cached research if available
-                research_url = None
-                if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
-                    research_url = _RESEARCH_CACHE[query][0].get("url")
-                
-                tips.append({
-                    "category": "Strength Gains",
-                    "tip": f"Your {exercise} has improved {progression:.1f}% this month. Keep the momentum going with consistent overload.",
-                    "reasoning": "Progressive overload is the cornerstone of strength development.",
-                    "source": "PubMed Research" if research_url else "Sports Science",
-                    "research_url": research_url
-                })
-            elif count >= 4:
-                insights = OnlineDataFetcher.fetch_google_training_insights("Progressive Overload")
-                tips.append({
-                    "category": "Exercise Specialization",
-                    "tip": f"You've logged {exercise} {count} times recently. Focus on small jumps (2.5-5 lbs) to keep progressing.",
-                    "reasoning": "Plateaus are normal. " + (insights[0] if insights else "Micro-progress compounds over months into major gains."),
-                    "source": "Applied Training Science"
-                })
-        
-        # Exercise variety tips
-        unique_exercises = len(set(w["exercise"] for w in self._get_recent_workouts(14)))
-        if unique_exercises < 5:
-            tips.append({
-                "category": "Exercise Variety",
-                "tip": f"You're using {unique_exercises} different exercises. Adding 1-2 variations prevents plateau and reduces injury risk.",
-                "reasoning": "Varied stimulus from different angles = balanced development and resilience.",
-                "source": "Biomechanics Research"
-            })
-        
-        # Recovery tips (cached research)
-        if self.workouts:
-            last_workout = sorted(self.workouts, key=lambda w: w["date"])[-1]
-            days_since = (datetime.now().date() - last_workout["date"]).days
-            if days_since >= 3:
-                # Start background fetch for recovery research
-                query = "detraining muscle loss recovery"
-                OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
-                insights = OnlineDataFetcher.fetch_google_training_insights("Recovery")
-                
-                # Use cached research if available
-                research_url = None
-                if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
-                    research_url = _RESEARCH_CACHE[query][0].get("url")
-                
-                tips.append({
-                    "category": "Recovery & Training Frequency",
-                    "tip": f"It's been {days_since} days since your last session. Get back to the gym—detraining starts after 2 weeks. " + (insights[0] if insights else ""),
-                    "reasoning": "Muscle protein synthesis peaks 24-48 hours post-workout. Frequent training maintains adaptation.",
-                    "source": "Sports Science Research",
-                    "research_url": research_url
-                })
-        
-        # Default motivational tips with research backing if nothing specific applies
-        default_tips = [
+        DEFAULT_TIPS = [
             {
                 "category": "Form Focus",
                 "tip": "Perfect reps with controlled tempo beat sloppy heavy weight. Move with intention on every rep.",
                 "reasoning": "Mind-muscle connection and form quality drive adaptation and reduce injury.",
-                "source": "Biomechanics & Neuroscience Research"
+                "source": "Biomechanics & Neuroscience Research",
             },
             {
                 "category": "Plate Discipline",
                 "tip": "Most lifters use too much weight and sacrifice rep quality. Drop 10% and feel the difference.",
                 "reasoning": "Time under tension and controlled eccentrics build muscle better than ego lifting.",
-                "source": "Applied Strength Research"
+                "source": "Applied Strength Research",
             },
             {
                 "category": "Sleep Priority",
-                "tip": "Gains happen when you rest. Prioritize 7-9 hours tonight—your muscles are built in recovery.",
-                "reasoning": "Sleep is anabolic: it boosts testosterone, GH, and muscle protein synthesis while lowering cortisol.",
-                "source": "Sleep Physiology Research"
+                "tip": "Gains happen when you rest. Prioritise 7-9 hours tonight — your muscles are built in recovery.",
+                "reasoning": "Sleep is anabolic: boosts testosterone, GH, and muscle protein synthesis while lowering cortisol.",
+                "source": "Sleep Physiology Research",
             },
             {
                 "category": "Nutrition",
-                "tip": "Training is the stimulus. Protein is the building block. Eat 0.8-1g per lb of body weight daily.",
-                "reasoning": "Adequate protein intake maximizes muscle protein synthesis and recovery between sessions.",
-                "source": "Sports Nutrition Research"
+                "tip": "Training is the stimulus. Protein is the building block. Eat 0.8-1g per lb of bodyweight daily.",
+                "reasoning": "Adequate protein intake maximises muscle protein synthesis and recovery between sessions.",
+                "source": "Sports Nutrition Research",
             },
             {
                 "category": "Progressive Overload",
-                "tip": "Your goals demand progress. Track your lifts and aim to add 1-2 reps or 2-5 lbs monthly.",
+                "tip": "Track your lifts and aim to add 1-2 reps or 2.5-5 lbs each month.",
                 "reasoning": "Adaptation only occurs when you present novel challenges. Stagnation = stagnation.",
-                "source": "Exercise Adaptation Science"
+                "source": "Exercise Adaptation Science",
             },
         ]
-        
-        if not tips:
-            import random
-            tips.append(random.choice(default_tips))
-        
-        return tips[0]  # Return the most relevant tip
 
+        if not self.workouts:
+            seed = random.sample(DEFAULT_TIPS, min(max_tips, len(DEFAULT_TIPS)))
+            seed[0] = {
+                "category": "Getting Started",
+                "tip": "Start logging your first workout! Consistency beats perfection every time.",
+                "reasoning": "No workout data yet — once you log sessions Hercules will personalise these tips.",
+                "source": "Hercules AI",
+            }
+            return seed[:max_tips]
+
+        tips: List[Dict] = []
+
+        # --- Priority 1: Recovery warning ---
+        last_workout = sorted(self.workouts, key=lambda w: w["date"])[-1]
+        days_since = (datetime.now().date() - last_workout["date"]).days
+        if days_since >= 3:
+            query = "detraining muscle loss recovery"
+            OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
+            insights = OnlineDataFetcher.fetch_google_training_insights("Recovery")
+            research_url = None
+            if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
+                research_url = _RESEARCH_CACHE[query][0].get("url")
+            tips.append({
+                "category": "Recovery & Training Frequency",
+                "tip": (
+                    f"It's been {days_since} day{'s' if days_since != 1 else ''} since your last session. "
+                    "Get back to the gym — detraining begins after 2 weeks without stimulus. "
+                    + (insights[0] if insights else "")
+                ).strip(),
+                "reasoning": "Muscle protein synthesis peaks 24-48 h post-workout. Frequent training maintains adaptation.",
+                "source": "Sports Science Research",
+                "research_url": research_url,
+            })
+
+        # --- Priority 2: Volume prescription per split ---
+        for split in list(VOLUME_RECOMMENDATIONS):
+            if len(tips) >= max_tips:
+                break
+            total_sets = self._calculate_split_sets(split, 7)
+            opt = VOLUME_RECOMMENDATIONS[split]
+            if total_sets > 0 and total_sets < opt["optimal_min"]:
+                query = f"{split} training volume hypertrophy"
+                OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
+                research_url = None
+                if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
+                    research_url = _RESEARCH_CACHE[query][0].get("url")
+                tips.append({
+                    "category": "Volume Prescription",
+                    "tip": (
+                        f"Your {split} split is getting {total_sets} set{'s' if total_sets != 1 else ''}/week. "
+                        f"Aim for {opt['optimal_min']}–{opt['optimal_max']} sets for optimal hypertrophy."
+                    ),
+                    "reasoning": f"Research supports {opt['optimal_min']}–{opt['optimal_max']} sets/week per muscle for growth.",
+                    "source": "Sports Science Research",
+                    "research_url": research_url,
+                })
+            elif total_sets > opt["max_sustainable"]:
+                tips.append({
+                    "category": "Volume Management",
+                    "tip": (
+                        f"You're at {total_sets} sets/week on {split}. "
+                        f"Consider deloading to {opt['optimal_max']} to avoid fatigue and overuse."
+                    ),
+                    "reasoning": "Beyond ~25 sets/week marginal gains drop and injury risk climbs.",
+                    "source": "Sports Science Research",
+                })
+
+        # --- Priority 3: Strength progression ---
+        if len(tips) < max_tips:
+            top_exercises = self._get_top_exercises(1)
+            if top_exercises:
+                exercise, count = top_exercises[0]
+                progression = self._get_strength_progression(exercise, 30)
+                if progression is not None and progression > 5:
+                    query = "progressive overload strength training"
+                    OnlineDataFetcher.fetch_pubmed_research(query, use_async=True)
+                    research_url = None
+                    if query in _RESEARCH_CACHE and _RESEARCH_CACHE[query]:
+                        research_url = _RESEARCH_CACHE[query][0].get("url")
+                    tips.append({
+                        "category": "Strength Gains",
+                        "tip": f"Your {exercise} has improved {progression:.1f}% this month — you're in a solid progression window. Keep the overload coming.",
+                        "reasoning": "Progressive overload is the cornerstone of strength development.",
+                        "source": "PubMed Research" if research_url else "Sports Science",
+                        "research_url": research_url,
+                    })
+                elif count >= 4:
+                    ol_insights = OnlineDataFetcher.fetch_google_training_insights("Progressive Overload")
+                    tips.append({
+                        "category": "Exercise Specialisation",
+                        "tip": f"You've logged {exercise} {count} times recently. Target small jumps (2.5–5 lbs) each session.",
+                        "reasoning": "Plateaus are normal. " + (ol_insights[0] if ol_insights else "Micro-progress compounds into major gains over months."),
+                        "source": "Applied Training Science",
+                    })
+
+        # --- Priority 4: Consistency milestone ---
+        if len(tips) < max_tips:
+            streak = self._calculate_consistency_streak()
+            if streak >= 7:
+                tips.append({
+                    "category": "Consistency",
+                    "tip": f"You've logged {streak} consecutive days — that habit is the #1 predictor of long-term gains.",
+                    "reasoning": "Consistency > intensity. Long-term adherence outperforms any single training variable.",
+                    "source": "Behavioral Science Research",
+                })
+
+        # --- Priority 5: Exercise variety ---
+        if len(tips) < max_tips:
+            unique_exercises = len(set(w["exercise"] for w in self._get_recent_workouts(14)))
+            if 0 < unique_exercises < 5:
+                tips.append({
+                    "category": "Exercise Variety",
+                    "tip": f"You've used {unique_exercises} distinct exercise{'s' if unique_exercises != 1 else ''} in two weeks. Adding 1–2 variations reduces overuse risk and balances development.",
+                    "reasoning": "Varied stimulus from different angles produces balanced, resilient musculature.",
+                    "source": "Biomechanics Research",
+                })
+
+        # --- Fill remaining slots with randomised defaults ---
+        seen_categories = {t["category"] for t in tips}
+        shuffled_defaults = [d for d in random.sample(DEFAULT_TIPS, len(DEFAULT_TIPS)) if d["category"] not in seen_categories]
+        while len(tips) < max_tips and shuffled_defaults:
+            tips.append(shuffled_defaults.pop(0))
+
+        # --- Priority 0 (inserted after existing tips): Goal progress ---
+        if len(tips) < max_tips and self.goals and self.workouts:
+            for goal in self.goals:
+                if len(tips) >= max_tips:
+                    break
+                if goal["goal_type"] == "lift" and goal["exercise"]:
+                    ex_workouts = [w for w in self.workouts if w["exercise"] == goal["exercise"]]
+                    if ex_workouts:
+                        best = max(w["weight"] for w in ex_workouts)
+                        pct = (best / goal["target_weight"]) * 100 if goal["target_weight"] else 0
+                        if pct < 100:
+                            remaining = goal["target_weight"] - best
+                            tips.append({
+                                "category": "Goal Progress",
+                                "tip": (
+                                    f"Your {goal['exercise']} best is {best:.1f} lbs — "
+                                    f"{pct:.0f}% of your {goal['target_weight']:.0f} lb goal. "
+                                    f"Only {remaining:.1f} lbs to go."
+                                ),
+                                "reasoning": "Tracking progress against specific targets accelerates goal attainment.",
+                                "source": "Hercules Goal Tracker",
+                            })
+                        else:
+                            tips.append({
+                                "category": "Goal Progress",
+                                "tip": (
+                                    f"You've hit your {goal['exercise']} goal of {goal['target_weight']:.0f} lbs! "
+                                    "Mark it as achieved and set a new target."
+                                ),
+                                "reasoning": "You've met your goal — update it to keep progressing.",
+                                "source": "Hercules Goal Tracker",
+                            })
+
+        return tips[:max_tips]
+
+    def generate_coaching_tip(self) -> Dict[str, str]:
+        """Return the single highest-priority coaching tip. Kept for backward compatibility."""
+        return self.generate_coaching_tips(1)[0]
+
+    def generate_weekly_summary(self) -> Dict[str, Any]:
+        """Generate a structured weekly check-in covering volume, frequency, and next steps."""
+        week_workouts = self._get_recent_workouts(7)
+        total_workouts_this_week = len(set(w["date"] for w in week_workouts))
+        total_volume_this_week = int(sum(w["volume"] for w in week_workouts))
+        sets_by_split = {split: self._calculate_split_sets(split, 7) for split in VOLUME_RECOMMENDATIONS}
+
+        days_since_last: Optional[int] = None
+        if self.workouts:
+            last = sorted(self.workouts, key=lambda w: w["date"])[-1]
+            days_since_last = (datetime.now().date() - last["date"]).days
+
+        week_exercise_vol: Dict[str, float] = defaultdict(float)
+        for w in week_workouts:
+            week_exercise_vol[w["exercise"]] += w["volume"]
+        top_mover = max(week_exercise_vol, key=lambda k: week_exercise_vol[k]) if week_exercise_vol else None
+
+        volume_gaps = []
+        for split, sets in sets_by_split.items():
+            opt = VOLUME_RECOMMENDATIONS[split]
+            if sets < opt["optimal_min"]:
+                volume_gaps.append(f"{split} ({sets}/{opt['optimal_min']} sets minimum)")
+
+        if total_workouts_this_week == 0:
+            headline = "No sessions logged this week yet."
+            narrative = "Start this week strong — even one session resets your momentum."
+        elif total_workouts_this_week == 1:
+            headline = "One session logged this week."
+            narrative = "Good start. Aim for 3–4 sessions to hit optimal training frequency."
+        elif total_workouts_this_week <= 3:
+            headline = f"{total_workouts_this_week} sessions logged this week."
+            narrative = "Solid consistency. One or two more sessions would round out the week."
+        else:
+            headline = f"Strong week — {total_workouts_this_week} sessions and {total_volume_this_week:,} lbs total volume."
+            narrative = "You're in the optimal frequency range. Focus on intensity and exercise quality now."
+
+        next_steps = []
+        for gap in volume_gaps:
+            next_steps.append(f"Add a {gap.split('(')[0].strip()} session to close the volume gap: {gap}")
+        if days_since_last is not None and days_since_last >= 2:
+            next_steps.append(f"It's been {days_since_last} day{'s' if days_since_last != 1 else ''} since your last workout — a session today keeps momentum alive.")
+        if not next_steps:
+            next_steps.append("Continue current pattern and focus on progressive overload next session.")
+
+        return {
+            "headline": headline,
+            "narrative": narrative,
+            "total_workouts_this_week": total_workouts_this_week,
+            "total_volume_this_week": total_volume_this_week,
+            "sets_by_split": sets_by_split,
+            "top_mover": top_mover,
+            "days_since_last": days_since_last,
+            "volume_gaps": volume_gaps,
+            "next_steps": next_steps,
+        }
 
     def _calculate_split_sets(self, split: str, days: int) -> int:
         """Calculate total sets for a given split in last N days."""

@@ -4,12 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Hercules Workout Tracker{% endblock %}</title>
+
+    <!-- PWA / iOS meta tags -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#0b1220">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Hercules">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head_extra %}{% endblock %}
     <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
+    <!-- Service worker registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+            .catch(() => {}); // silently ignore in dev/http
+        });
+      }
+    </script>
 </head>
 <body>
     <div class="app-shell">
@@ -30,6 +48,9 @@
                 <a href="{{ url_for('main.tracker') }}" class="nav-link" data-spa-nav="true">Tracker</a>
                 <a href="{{ url_for('main.programs') }}" class="nav-link" data-spa-nav="true">Programs</a>
                 <a href="{{ url_for('main.nutrition') }}" class="nav-link" data-spa-nav="true">Nutrition</a>
+                <a href="{{ url_for('main.metrics') }}" class="nav-link" data-spa-nav="true">Metrics</a>
+                                <a href="{{ url_for('main.goals_page') }}" class="nav-link" data-spa-nav="true">Goals</a>
+                                <a href="{{ url_for('main.history_page') }}" class="nav-link" data-spa-nav="true">History</a>
                 <label class="music-picker-label" for="music-track-picker">Track</label>
                 <select id="music-track-picker" class="music-picker" aria-label="Choose background music track" data-music-picker="true">
                                         {% if topbar_tracks %}

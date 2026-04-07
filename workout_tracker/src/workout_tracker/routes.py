@@ -1,6 +1,43 @@
 from datetime import datetime, date
+import csv
+import io
+import json
 from pathlib import Path
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app
+import time
+import threading
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Hard timeout (seconds) for AI engine calls
+_AI_TIMEOUT = 5.0
+
+def _run_with_timeout(fn, timeout=_AI_TIMEOUT, default=None):
+    """Run *fn* in a thread; return its result or *default* if it takes too long."""
+    result = [default]
+    exc    = [None]
+
+    def _target():
+        try:
+            result[0] = fn()
+        except Exception as e:      # noqa: BLE001
+            exc[0] = e
+
+    t = threading.Thread(target=_target, daemon=True)
+    t0 = time.monotonic()
+    t.start()
+    t.join(timeout)
+    elapsed = time.monotonic() - t0
+
+    if t.is_alive():
+        logger.error("Hercules AI timeout after %.1fs — returning default", timeout)
+        return default, True        # (value, timed_out)
+    if exc[0] is not None:
+        logger.error("Hercules AI error (%.2fs): %s", elapsed, exc[0], exc_info=exc[0])
+        return default, False
+    logger.info("Hercules AI ok (%.2fs)", elapsed)
+    return result[0], False
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, current_app, Response
 from flask_login import login_required, current_user
 from .db import db
 from .models import (
@@ -12,6 +49,7 @@ from .models import (
     MealEntry,
     SavedMeal,
     BodyMetric,
+    Goal,
 )
 from .hercules.engine import HerculesEngine, OnlineDataFetcher
 
@@ -157,6 +195,52 @@ def tracker():
 def nutrition():
     return render_template("nutrition.html")
 
+@main_bp.route("/metrics")
+@login_required
+def metrics():
+    return render_template("metrics.html")
+
+@main_bp.route("/goals")
+@login_required
+def goals_page():
+    return render_template("goals.html")
+
+@main_bp.route("/history")
+@login_required
+def history_page():
+    return render_template("history.html")
+
+@main_bp.route("/api/workouts/calendar", methods=["GET"])
+@login_required
+def workouts_calendar():
+    """Return a dict of date -> list of entries for a given year/month."""
+    from collections import defaultdict
+    year  = request.args.get("year",  type=int)
+    month = request.args.get("month", type=int)
+    if not year or not month:
+        return jsonify({"error": "year and month required"}), 400
+    rows = (
+        Workout.query
+        .filter_by(user_id=current_user.id)
+        .filter(db.extract("year",  Workout.date) == year)
+        .filter(db.extract("month", Workout.date) == month)
+        .order_by(Workout.date.asc(), Workout.id.asc())
+        .all()
+    )
+    by_date = defaultdict(list)
+    for w in rows:
+        key = w.date.isoformat() if hasattr(w.date, "isoformat") else w.date
+        by_date[key].append({
+            "id":       w.id,
+            "split":    w.split,
+            "exercise": w.exercise,
+            "sets":     w.sets,
+            "reps":     w.reps,
+            "weight":   w.weight,
+            "notes":    w.notes or "",
+        })
+    return jsonify(dict(by_date))
+
 @main_bp.route("/api/workouts", methods=["GET"])
 @login_required
 def list_workouts():
@@ -257,14 +341,28 @@ def workout_performance_cards():
 @main_bp.route("/api/hercules/coaching-tip", methods=["GET"])
 @login_required
 def get_coaching_tip():
-    """Get a personalized coaching tip from Hercules AI."""
+    """Get up to three personalised coaching tips from Hercules AI."""
     workouts = Workout.query.filter_by(user_id=current_user.id).all()
-    
-    engine = HerculesEngine(current_user.id)
+    goals    = Goal.query.filter_by(user_id=current_user.id, achieved=False).all()
+    engine   = HerculesEngine(current_user.id)
     engine.load_workouts(workouts)
-    
-    tip = engine.generate_coaching_tip()
-    return jsonify(tip)
+    engine.load_goals(goals)
+    tips, _ = _run_with_timeout(lambda: engine.generate_coaching_tips(3), default=[])
+    return jsonify(tips or ["Keep pushing — great things take consistency."])
+
+
+@main_bp.route("/api/hercules/weekly-summary", methods=["GET"])
+@login_required
+def get_weekly_summary():
+    """Get a structured weekly training check-in."""
+    workouts = Workout.query.filter_by(user_id=current_user.id).all()
+    goals    = Goal.query.filter_by(user_id=current_user.id, achieved=False).all()
+    engine   = HerculesEngine(current_user.id)
+    engine.load_workouts(workouts)
+    engine.load_goals(goals)
+    summary, _ = _run_with_timeout(engine.generate_weekly_summary,
+                                   default={"status": "unavailable", "message": "Summary temporarily unavailable."})
+    return jsonify(summary)
 
 @main_bp.route("/api/hercules/form-cue", methods=["POST"])
 @login_required
@@ -277,8 +375,8 @@ def get_form_cue():
         return jsonify({"error": "Exercise name required"}), 400
     
     engine = HerculesEngine(current_user.id)
-    cue = engine.get_form_cue(exercise)
-    
+    cue, _  = _run_with_timeout(lambda: engine.get_form_cue(exercise),
+                                default="Focus on quality movement throughout the set.")
     return jsonify({"exercise": exercise, "form_cue": cue})
 
 @main_bp.route("/api/hercules/summary", methods=["GET"])
@@ -290,7 +388,7 @@ def get_training_summary():
     engine = HerculesEngine(current_user.id)
     engine.load_workouts(workouts)
     
-    stats = engine.generate_summary_stats()
+    stats, _ = _run_with_timeout(engine.generate_summary_stats, default={})
     return jsonify(stats)
 
 
@@ -733,3 +831,204 @@ def get_nutrition_tip():
     engine = HerculesEngine(current_user.id)
     tip = engine.generate_nutrition_tip(_serialize_profile(profile), meals, meal_name=meal_name)
     return jsonify(tip)
+
+
+# ── Data Export ───────────────────────────────────────────────────────────────
+
+@main_bp.route("/api/export/workouts.csv")
+@login_required
+def export_workouts_csv():
+    """Download all workouts as a CSV file."""
+    workouts = (
+        Workout.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Workout.date.desc(), Workout.id.desc())
+        .all()
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "date", "split", "exercise", "sets", "reps", "weight_lbs", "notes"])
+    for w in workouts:
+        writer.writerow([w.id, w.date.isoformat(), w.split, w.exercise,
+                         w.sets, w.reps, w.weight, w.notes or ""])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=hercules_workouts.csv"},
+    )
+
+
+@main_bp.route("/api/export/workouts.json")
+@login_required
+def export_workouts_json():
+    """Download all workouts as a JSON file."""
+    workouts = (
+        Workout.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Workout.date.desc(), Workout.id.desc())
+        .all()
+    )
+    data = [
+        {
+            "id": w.id,
+            "date": w.date.isoformat(),
+            "split": w.split,
+            "exercise": w.exercise,
+            "sets": w.sets,
+            "reps": w.reps,
+            "weight_lbs": w.weight,
+            "notes": w.notes or "",
+        }
+        for w in workouts
+    ]
+    return Response(
+        json.dumps({"exported_at": datetime.utcnow().isoformat(), "workouts": data}, indent=2),
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=hercules_workouts.json"},
+    )
+
+
+@main_bp.route("/api/export/metrics.csv")
+@login_required
+def export_metrics_csv():
+    """Download all body metrics as a CSV file."""
+    metrics = (
+        BodyMetric.query
+        .filter_by(user_id=current_user.id)
+        .order_by(BodyMetric.date.desc(), BodyMetric.id.desc())
+        .all()
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "date", "weight_lbs", "body_fat_pct", "waist_inches", "notes"])
+    for m in metrics:
+        writer.writerow([
+            m.id, m.date.isoformat(), m.weight_lbs,
+            m.body_fat_pct if m.body_fat_pct is not None else "",
+            m.waist_inches if m.waist_inches is not None else "",
+            m.notes or "",
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=hercules_metrics.csv"},
+    )
+
+
+@main_bp.route("/api/export/nutrition.csv")
+@login_required
+def export_nutrition_csv():
+    """Download all meal entries as a CSV file."""
+    meals = (
+        MealEntry.query
+        .filter_by(user_id=current_user.id)
+        .order_by(MealEntry.date.desc(), MealEntry.id.desc())
+        .all()
+    )
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "date", "meal_name", "food_name", "serving_size",
+                     "calories", "protein_g", "carbs_g", "fats_g", "fiber_g", "notes"])
+    for m in meals:
+        writer.writerow([
+            m.id, m.date.isoformat(), m.meal_name, m.food_name,
+            m.serving_size or "", m.calories, m.protein_g, m.carbs_g,
+            m.fats_g, m.fiber_g, m.notes or "",
+        ])
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=hercules_nutrition.csv"},
+    )
+
+
+# ── Goals ─────────────────────────────────────────────────────────────────────
+
+def _serialize_goal(g):
+    return {
+        "id": g.id,
+        "goal_type": g.goal_type,
+        "exercise": g.exercise or "",
+        "target_weight": g.target_weight,
+        "target_date": g.target_date.isoformat() if g.target_date else None,
+        "note": g.note or "",
+        "achieved": g.achieved,
+        "created_at": g.created_at.isoformat(),
+    }
+
+
+@main_bp.route("/api/goals", methods=["GET"])
+@login_required
+def list_goals():
+    goals = Goal.query.filter_by(user_id=current_user.id).order_by(Goal.created_at.desc()).all()
+    return jsonify([_serialize_goal(g) for g in goals])
+
+
+@main_bp.route("/api/goals", methods=["POST"])
+@login_required
+def create_goal():
+    data = request.get_json(force=True) or {}
+    goal_type = (data.get("goal_type") or "lift").lower()
+    if goal_type not in ("lift", "bodyweight"):
+        return jsonify({"error": "goal_type must be 'lift' or 'bodyweight'"}), 400
+
+    target = data.get("target_weight")
+    if target is None:
+        return jsonify({"error": "target_weight is required"}), 400
+
+    exercise = (data.get("exercise") or "").strip() or None
+    if goal_type == "lift" and not exercise:
+        return jsonify({"error": "exercise is required for lift goals"}), 400
+
+    raw_date = data.get("target_date")
+    target_date = None
+    if raw_date:
+        target_date = _parse_iso_date(raw_date)
+        if target_date is None:
+            return jsonify({"error": "Invalid target_date format. Use YYYY-MM-DD."}), 400
+
+    g = Goal(
+        user_id=current_user.id,
+        goal_type=goal_type,
+        exercise=exercise,
+        target_weight=float(target),
+        target_date=target_date,
+        note=(data.get("note") or "").strip() or None,
+    )
+    db.session.add(g)
+    db.session.commit()
+    return jsonify({"ok": True, "goal": _serialize_goal(g)}), 201
+
+
+@main_bp.route("/api/goals/<int:gid>", methods=["PATCH"])
+@login_required
+def update_goal(gid):
+    g = Goal.query.filter_by(id=gid, user_id=current_user.id).first()
+    if not g:
+        return jsonify({"error": "not found"}), 404
+    data = request.get_json(force=True) or {}
+    if "achieved" in data:
+        g.achieved = bool(data["achieved"])
+    if "note" in data:
+        g.note = (data["note"] or "").strip() or None
+    if "target_date" in data:
+        td = _parse_iso_date(data["target_date"])
+        if td is None and data["target_date"]:
+            return jsonify({"error": "Invalid target_date format"}), 400
+        g.target_date = td
+    if "target_weight" in data:
+        g.target_weight = float(data["target_weight"])
+    db.session.commit()
+    return jsonify({"ok": True, "goal": _serialize_goal(g)})
+
+
+@main_bp.route("/api/goals/<int:gid>", methods=["DELETE"])
+@login_required
+def delete_goal(gid):
+    g = Goal.query.filter_by(id=gid, user_id=current_user.id).first()
+    if not g:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(g)
+    db.session.commit()
+    return jsonify({"ok": True})
+

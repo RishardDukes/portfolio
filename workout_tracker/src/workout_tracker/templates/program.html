@@ -182,6 +182,14 @@ async function deleteExercise(eid) {
   if (res.ok) fetchPrograms();
 }
 
+// Expose handlers globally because SPA navigation executes inline scripts in a closure.
+window.createProgram = createProgram;
+window.deleteProgram = deleteProgram;
+window.addDay = addDay;
+window.deleteDay = deleteDay;
+window.addExercise = addExercise;
+window.deleteExercise = deleteExercise;
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
