@@ -136,11 +136,19 @@
     };
     const msg = document.getElementById('goal-save-msg');
     try {
-      const res = await fetch('/api/goals', {
+      const res = await herculesRequest('/api/goals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      if (res.queued) {
+        msg.textContent = '✓ Goal queued for sync';
+        msg.style.color = 'var(--primary)';
+        window.herculesNotifyQueued('Goal saved locally and will sync when you are back online.');
+        e.target.reset();
+        document.getElementById('exercise-group').style.display = '';
+        return;
+      }
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || res.statusText);
@@ -158,17 +166,25 @@
   }
 
   async function toggleAchieved(id, current) {
-    await fetch(`/api/goals/${id}`, {
+    const res = await herculesRequest(`/api/goals/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ achieved: !current }),
     });
+    if (res.queued) {
+      window.herculesNotifyQueued('Goal update queued for sync.');
+      return;
+    }
     await loadGoals();
   }
 
   async function deleteGoal(id) {
     if (!confirm('Delete this goal?')) return;
-    await fetch(`/api/goals/${id}`, { method: 'DELETE' });
+    const res = await herculesRequest(`/api/goals/${id}`, { method: 'DELETE' });
+    if (res.queued) {
+      window.herculesNotifyQueued('Goal deletion queued for sync.');
+      return;
+    }
     await loadGoals();
   }
 

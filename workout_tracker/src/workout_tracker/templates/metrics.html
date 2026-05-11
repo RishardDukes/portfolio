@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Body Metrics | Hercules{% endblock %}
 {% block head_extra %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 {% endblock %}
 {% block content %}
 <section class="tracker-header panel">
@@ -148,11 +148,20 @@
     };
     const msg = document.getElementById('metrics-save-msg');
     try {
-      const res = await fetch('/api/nutrition/body-metrics', {
+      const res = await herculesRequest('/api/nutrition/body-metrics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      if (res.queued) {
+        msg.textContent = '✓ Saved locally';
+        msg.style.color = 'var(--primary)';
+        window.herculesNotifyQueued('Body metric saved locally and will sync when you are back online.');
+        document.getElementById('metric-bf').value = '';
+        document.getElementById('metric-waist').value = '';
+        document.getElementById('metric-notes').value = '';
+        return;
+      }
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || res.statusText);
@@ -173,7 +182,11 @@
 
   async function deleteMetric(id) {
     if (!confirm('Delete this entry?')) return;
-    await fetch(`/api/nutrition/body-metrics/${id}`, { method: 'DELETE' });
+    const res = await herculesRequest(`/api/nutrition/body-metrics/${id}`, { method: 'DELETE' });
+    if (res.queued) {
+      window.herculesNotifyQueued('Body metric deletion queued for sync.');
+      return;
+    }
     await loadMetrics();
   }
 

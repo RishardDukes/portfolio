@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Tracker | Hercules{% endblock %}
 {% block head_extra %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
 {% endblock %}
 {% block content %}
 <section class="tracker-header panel">
@@ -331,7 +331,11 @@ function fetchPerformanceCards() {
 }
 
 function deleteWorkout(id) {
-    fetch(`/api/workouts/${id}`, { method: 'DELETE' }).then(r => {
+  herculesRequest(`/api/workouts/${id}`, { method: 'DELETE' }).then(r => {
+        if (r.queued) {
+          window.herculesNotifyQueued('Workout deletion queued for sync.');
+          return;
+        }
         if (r.ok) fetchWorkouts();
     });
 }
@@ -343,12 +347,26 @@ form.addEventListener('submit', function(e) {
     if (!unilateral.checked) {
       delete data.side;
     }
-    fetch('/api/workouts', {
+    herculesRequest('/api/workouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
     }).then(r => {
-        if (r.ok) {
+      if (r.queued) {
+        if (postWorkoutBanner) {
+          postWorkoutBanner.innerHTML = '<span class="coach-category">Offline</span><span class="post-workout-tip-text">Workout saved locally and will sync when you are back online.</span>';
+          postWorkoutBanner.style.display = 'flex';
+          setTimeout(() => { postWorkoutBanner.style.display = 'none'; }, 12000);
+        }
+        window.herculesNotifyQueued('Workout saved locally and will sync when you are back online.');
+        const keepDate = dateInput.value;
+        form.reset();
+        dateInput.value = keepDate || today;
+        updateExercises();
+        toggleSideSelector();
+        return;
+      }
+      if (r.ok) {
             const keepDate = dateInput.value;
             form.reset();
             dateInput.value = keepDate || today;

@@ -28,3 +28,7 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# Local Node runtime for Capacitor setup
+.local/
+node_modules/

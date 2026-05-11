@@ -1,3 +1,180 @@
+const OFFLINE_QUEUE_KEY = 'herculesOfflineQueue';
+const OFFLINE_TOAST_ID = 'hercules-offline-toast';
+
+function readOfflineQueue() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOfflineQueue(queue) {
+  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+}
+
+function notifyQueued(message) {
+  if (!message) {
+    return;
+  }
+
+  const renderToast = () => {
+    let toast = document.getElementById(OFFLINE_TOAST_ID);
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = OFFLINE_TOAST_ID;
+      toast.style.position = 'fixed';
+      toast.style.left = '50%';
+      toast.style.bottom = '20px';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.zIndex = '9999';
+      toast.style.maxWidth = 'min(92vw, 560px)';
+      toast.style.padding = '12px 16px';
+      toast.style.borderRadius = '999px';
+      toast.style.background = 'rgba(15, 23, 42, 0.96)';
+      toast.style.color = '#e5eefc';
+      toast.style.border = '1px solid rgba(148, 163, 184, 0.24)';
+      toast.style.boxShadow = '0 16px 40px rgba(2, 8, 23, 0.45)';
+      toast.style.font = '600 0.92rem system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif';
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(window.__herculesToastTimer);
+    window.__herculesToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(8px)';
+    }, 3500);
+  };
+
+  if (document.body) {
+    renderToast();
+  } else {
+    document.addEventListener('DOMContentLoaded', renderToast, { once: true });
+  }
+}
+
+function queueOfflineRequest(url, options) {
+  const queue = readOfflineQueue();
+  queue.push({
+    url,
+    method: (options.method || 'POST').toUpperCase(),
+    headers: options.headers || {},
+    body: options.body ?? null,
+    queued_at: new Date().toISOString(),
+  });
+  writeOfflineQueue(queue);
+  window.dispatchEvent(new CustomEvent('hercules-offline-queue-changed', { detail: { count: queue.length } }));
+}
+
+function queuedResponse(entry) {
+  const payload = {
+    queued: true,
+    offline: true,
+    method: entry.method,
+    url: entry.url,
+    queued_at: entry.queued_at,
+  };
+
+  return {
+    ok: true,
+    status: 202,
+    queued: true,
+    json: async () => payload,
+    text: async () => JSON.stringify(payload),
+  };
+}
+
+async function flushOfflineQueue() {
+  if (!navigator.onLine) {
+    return;
+  }
+
+  const queue = readOfflineQueue();
+  if (!queue.length) {
+    return;
+  }
+
+  const remaining = [];
+  let syncedCount = 0;
+
+  for (const entry of queue) {
+    try {
+      const response = await fetch(entry.url, {
+        method: entry.method,
+        headers: entry.headers,
+        body: entry.body,
+        credentials: 'same-origin',
+      });
+
+      if (!response.ok) {
+        remaining.push(entry);
+        continue;
+      }
+
+      syncedCount += 1;
+    } catch {
+      remaining.push(entry);
+    }
+  }
+
+  writeOfflineQueue(remaining);
+  window.dispatchEvent(new CustomEvent('hercules-offline-queue-changed', { detail: { count: remaining.length } }));
+
+  if (syncedCount > 0) {
+    notifyQueued(`Synced ${syncedCount} queued action${syncedCount === 1 ? '' : 's'} from offline mode.`);
+  }
+}
+
+async function herculesRequest(url, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const mutating = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+  const requestOptions = {
+    credentials: 'same-origin',
+    ...options,
+    method,
+  };
+
+  if (mutating && !navigator.onLine) {
+    const entry = {
+      url,
+      method,
+      headers: requestOptions.headers || {},
+      body: requestOptions.body ?? null,
+      queued_at: new Date().toISOString(),
+    };
+    queueOfflineRequest(url, requestOptions);
+    return queuedResponse(entry);
+  }
+
+  try {
+    return await fetch(url, requestOptions);
+  } catch (error) {
+    if (mutating) {
+      const entry = {
+        url,
+        method,
+        headers: requestOptions.headers || {},
+        body: requestOptions.body ?? null,
+        queued_at: new Date().toISOString(),
+      };
+      queueOfflineRequest(url, requestOptions);
+      notifyQueued('Saved locally. Your changes will sync when the connection returns.');
+      return queuedResponse(entry);
+    }
+    throw error;
+  }
+}
+
+window.herculesRequest = herculesRequest;
+window.herculesFlushOfflineQueue = flushOfflineQueue;
+window.herculesNotifyQueued = notifyQueued;
+
 document.addEventListener('DOMContentLoaded', () => {
   const selectors = {
     interactive: 'button, .btn, input[type="submit"], input[type="button"], [role="button"], .nav-link',
@@ -371,4 +548,10 @@ document.addEventListener('DOMContentLoaded', () => {
       startMusicIfNeeded();
     }
   });
+
+  flushOfflineQueue().catch(() => {});
+});
+
+window.addEventListener('online', () => {
+  flushOfflineQueue().catch(() => {});
 });

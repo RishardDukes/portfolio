@@ -1,0 +1,13 @@
+{
+  "appId": "com.risharddukes.hercules",
+  "appName": "Hercules",
+  "webDir": "src/workout_tracker/static",
+  "server": {
+    "url": "http://127.0.0.1:5000",
+    "cleartext": true
+  },
+  "ios": {
+    "scheme": "Hercules",
+    "contentInset": "automatic"
+  }
+}

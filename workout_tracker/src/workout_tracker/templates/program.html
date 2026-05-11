@@ -119,11 +119,16 @@ async function createProgram() {
   const input = document.getElementById('new-program-name');
   const name = (input.value || '').trim();
   if (!name) { input.focus(); return; }
-  const res = await fetch('/api/programs', {
+  const res = await herculesRequest('/api/programs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name }),
   });
+  if (res.queued) {
+    input.value = '';
+    window.herculesNotifyQueued('Program saved locally and will sync when you are back online.');
+    return;
+  }
   if (res.ok) {
     input.value = '';
     fetchPrograms();
@@ -132,7 +137,11 @@ async function createProgram() {
 
 async function deleteProgram(pid) {
   if (!confirm('Delete this program and all its days?')) return;
-  const res = await fetch(`/api/programs/${pid}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/programs/${pid}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Program deletion queued for sync.');
+    return;
+  }
   if (res.ok) fetchPrograms();
 }
 
@@ -140,11 +149,16 @@ async function addDay(progId) {
   const input = document.getElementById(`day-label-${progId}`);
   const label = (input.value || '').trim();
   if (!label) { input.focus(); return; }
-  const res = await fetch(`/api/programs/${progId}/days`, {
+  const res = await herculesRequest(`/api/programs/${progId}/days`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ label }),
   });
+  if (res.queued) {
+    input.value = '';
+    window.herculesNotifyQueued('Training day queued for sync.');
+    return;
+  }
   if (res.ok) {
     input.value = '';
     fetchPrograms();
@@ -152,7 +166,11 @@ async function addDay(progId) {
 }
 
 async function deleteDay(did) {
-  const res = await fetch(`/api/programs/days/${did}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/programs/days/${did}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Training day deletion queued for sync.');
+    return;
+  }
   if (res.ok) fetchPrograms();
 }
 
@@ -162,7 +180,7 @@ async function addExercise(did) {
   const repsInput = document.getElementById(`ex-reps-${did}`);
   const name = (nameInput.value || '').trim();
   if (!name) { nameInput.focus(); return; }
-  const res = await fetch(`/api/programs/days/${did}/exercises`, {
+  const res = await herculesRequest(`/api/programs/days/${did}/exercises`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -171,6 +189,11 @@ async function addExercise(did) {
       target_reps: parseInt(repsInput.value) || 10,
     }),
   });
+  if (res.queued) {
+    nameInput.value = '';
+    window.herculesNotifyQueued('Exercise queued for sync.');
+    return;
+  }
   if (res.ok) {
     nameInput.value = '';
     fetchPrograms();
@@ -178,7 +201,11 @@ async function addExercise(did) {
 }
 
 async function deleteExercise(eid) {
-  const res = await fetch(`/api/programs/exercises/${eid}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/programs/exercises/${eid}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Exercise deletion queued for sync.');
+    return;
+  }
   if (res.ok) fetchPrograms();
 }
 

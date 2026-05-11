@@ -32,6 +32,7 @@ var/
 
 # Local environment files
 .env
+.local/
 
 # SQLite / local runtime databases
 *.db

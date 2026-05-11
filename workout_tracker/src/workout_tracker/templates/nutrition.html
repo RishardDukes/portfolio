@@ -369,11 +369,16 @@ function renderMeals() {
 profileForm.addEventListener('submit', async event => {
   event.preventDefault();
   const payload = Object.fromEntries(new FormData(profileForm));
-  const res = await fetch('/api/nutrition/profile', {
+  const res = await herculesRequest('/api/nutrition/profile', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (res.queued) {
+    window.herculesNotifyQueued('Nutrition targets saved locally and will sync when you are back online.');
+    profileData = profileData ? { ...profileData, ...payload } : { ...payload };
+    return;
+  }
   if (!res.ok) return;
   profileData = await res.json();
   await fetchMealsAndSummary();
@@ -383,18 +388,27 @@ mealForm.addEventListener('submit', async event => {
   event.preventDefault();
   const payload = Object.fromEntries(new FormData(mealForm));
   payload.date = nutritionDateInput.value || today;
-  const res = await fetch('/api/nutrition/meals', {
+  const res = await herculesRequest('/api/nutrition/meals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (res.queued) {
+    window.herculesNotifyQueued('Meal logged locally and will sync when you are back online.');
+    mealForm.reset();
+    return;
+  }
   if (!res.ok) return;
   mealForm.reset();
   await fetchMealsAndSummary();
 });
 
 async function deleteMeal(id) {
-  const res = await fetch(`/api/nutrition/meals/${id}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/nutrition/meals/${id}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Meal deletion queued for sync.');
+    return;
+  }
   if (res.ok) fetchMealsAndSummary();
 }
 window.deleteMeal = deleteMeal;
@@ -443,11 +457,16 @@ async function saveCurrentMealTemplate() {
   payload.name = (savedMealNameInput.value || '').trim();
   payload.default_meal_name = payload.meal_name || 'Meal';
 
-  const res = await fetch('/api/nutrition/saved-meals', {
+  const res = await herculesRequest('/api/nutrition/saved-meals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (res.queued) {
+    savedMealNameInput.value = '';
+    window.herculesNotifyQueued('Saved meal template queued for sync.');
+    return;
+  }
   if (!res.ok) return;
   savedMealNameInput.value = '';
   await fetchSavedMeals();
@@ -457,7 +476,7 @@ window.saveCurrentMealTemplate = saveCurrentMealTemplate;
 async function quickLogSavedMeal(savedMealId) {
   const match = savedMealsData.find(item => item.id === savedMealId);
   const mealName = document.getElementById('meal_name').value || match?.default_meal_name || 'Meal';
-  const res = await fetch(`/api/nutrition/saved-meals/${savedMealId}/log`, {
+  const res = await herculesRequest(`/api/nutrition/saved-meals/${savedMealId}/log`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -465,6 +484,10 @@ async function quickLogSavedMeal(savedMealId) {
       meal_name: mealName,
     }),
   });
+  if (res.queued) {
+    window.herculesNotifyQueued('Saved meal log queued for sync.');
+    return;
+  }
   if (!res.ok) return;
   await fetchMealsAndSummary();
 }
@@ -488,7 +511,11 @@ function loadSavedMealIntoForm(savedMealId) {
 window.loadSavedMealIntoForm = loadSavedMealIntoForm;
 
 async function deleteSavedMeal(savedMealId) {
-  const res = await fetch(`/api/nutrition/saved-meals/${savedMealId}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/nutrition/saved-meals/${savedMealId}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Saved meal deletion queued for sync.');
+    return;
+  }
   if (!res.ok) return;
   await fetchSavedMeals();
 }
@@ -534,11 +561,17 @@ async function fetchBodyMetrics() {
 bodyMetricForm.addEventListener('submit', async event => {
   event.preventDefault();
   const payload = Object.fromEntries(new FormData(bodyMetricForm));
-  const res = await fetch('/api/nutrition/body-metrics', {
+  const res = await herculesRequest('/api/nutrition/body-metrics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (res.queued) {
+    window.herculesNotifyQueued('Body metric logged locally and will sync when you are back online.');
+    bodyMetricForm.reset();
+    document.getElementById('metric_date').value = today;
+    return;
+  }
   if (!res.ok) return;
   bodyMetricForm.reset();
   document.getElementById('metric_date').value = today;
@@ -546,7 +579,11 @@ bodyMetricForm.addEventListener('submit', async event => {
 });
 
 async function deleteBodyMetric(metricId) {
-  const res = await fetch(`/api/nutrition/body-metrics/${metricId}`, { method: 'DELETE' });
+  const res = await herculesRequest(`/api/nutrition/body-metrics/${metricId}`, { method: 'DELETE' });
+  if (res.queued) {
+    window.herculesNotifyQueued('Body metric deletion queued for sync.');
+    return;
+  }
   if (!res.ok) return;
   await fetchBodyMetrics();
 }

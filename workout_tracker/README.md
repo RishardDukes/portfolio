@@ -97,6 +97,31 @@ python run.py
 
 Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
 
+## Mobile / Capacitor
+
+The project now includes a Capacitor iOS wrapper so the app can be packaged as a real iPhone application.
+
+Current setup:
+
+- Capacitor config lives in `capacitor.config.json`
+- The iOS project is generated in `ios/`
+- The app shell currently points at the Flask server at `http://127.0.0.1:5000` for local development
+
+Local setup from this folder:
+
+```bash
+npm install
+npm run cap:sync
+```
+
+On macOS with Xcode installed, open the native project with:
+
+```bash
+npm run cap:open:ios
+```
+
+Before shipping to TestFlight or the App Store, update the Capacitor server URL to your production HTTPS deployment.
+
 ## Development Notes
 
 - The app auto-creates the SQLite schema on startup.
